@@ -6,6 +6,7 @@ import socket
 import psutil
 from rich import align, box
 from rich.panel import Panel
+from rich.table import Table
 from textual.app import App
 from textual.widget import Widget
 
@@ -24,16 +25,23 @@ def val_to_color(val: float, minval: float, maxval: float) -> str:
 
 class InfoLine(Widget):
     def render(self):
-        # time = datetime.now().strftime("%c")
         # return Panel(align.Align("hello", "left"), align.Align("x", "right"))
         # return Columns(["x", "B", "CSDSDF"])
-        return [align.Align("hello", "left"), align.Align("x", "right")]
+        table = Table(border_style=None)
+        table.add_column("Released", justify="left", style="cyan", no_wrap=True)
+        table.add_column("Title", style="magenta")
+        table.add_column("Box Office", justify="right", style="green")
+
+        return Panel("B")
+        # time = datetime.now().strftime("%c")
+        # align.Align(f"[color(8)]{time}[/]", "center")
+
+    def on_mount(self):
+        self.set_interval(2.0, self.refresh)
 
 
 class CPU(Widget):
-    def __init__(self):
-        super().__init__()
-
+    def on_mount(self):
         self.data = []
         self.num_cores: int = psutil.cpu_count(logical=False)
         self.num_threads: int = psutil.cpu_count(logical=True)
@@ -43,6 +51,8 @@ class CPU(Widget):
         self.cpu_temp_total = 5 * " "
         self.temp_low = 40.0
         self.temp_high = psutil.sensors_temperatures()["coretemp"][0].high
+
+        self.set_interval(self.refresh_rate_s, self.refresh)
 
     def render(self):
         load_total = psutil.cpu_percent()
@@ -93,8 +103,6 @@ class CPU(Widget):
             p, title=f"cpu", title_align="left", border_style="color(4)", box=box.SQUARE
         )
 
-    def on_mount(self):
-        self.set_interval(self.refresh_rate_s, self.refresh)
 
 
 class Mem(Widget):
@@ -133,13 +141,17 @@ class Net(Widget):
 
 class SimpleApp(App):
     async def on_mount(self) -> None:
-        # await self.view.dock(InfoLine(), edge="top", size=1)
-        await self.view.dock(CPU(), edge="top", size=16)
-        await self.view.dock(ProcsList(), edge="right", size=50)
-        await self.view.dock(Mem(), edge="top", size=20)
-        await self.view.dock(Net(), edge="bottom", size=20)
+        await self.view.dock(InfoLine(), edge="top", size=4)
+        await self.view.dock(CPU(), edge="top", size=16, name="cpu")
+        await self.view.dock(ProcsList(), edge="right", size=50, name="proc")
+        await self.view.dock(Mem(), edge="top", size=20, name="mem")
+        await self.view.dock(Net(), edge="bottom", size=20, name="net")
 
     async def on_load(self, _):
+        await self.bind("c", "view.toggle('cpu')", "Toggle cpu")
+        await self.bind("m", "view.toggle('mem')", "Toggle mem")
+        await self.bind("n", "view.toggle('net')", "Toggle net")
+        await self.bind("p", "view.toggle('proc')", "Toggle proc")
         await self.bind("q", "quit")
 
     # async def action_color(self, color: str) -> None:
