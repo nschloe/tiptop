@@ -3,12 +3,18 @@ import socket
 import time
 from datetime import datetime, timedelta
 from math import ceil
+import itertools
 
 import psutil
 from rich import align, box
 from rich.panel import Panel
+from rich.table import Table
 from textual.app import App
 from textual.widget import Widget
+
+
+def argsort(seq):
+    return sorted(range(len(seq)), key=seq.__getitem__)
 
 
 def values_to_braille(values, minval: float, maxval: float) -> str:
@@ -128,16 +134,17 @@ class CPU(Widget):
             )
         ]
 
+        title = f"{self.num_cores} cores, {self.num_threads} threads, {int(psutil.cpu_freq().current)} MHz"
+
         load_avg = os.getloadavg()
-        lines += [
-            f"Load Avg:   {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
-        ]
+        subtitle = f"Load Avg:   {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
 
         p = align.Align(
             Panel(
                 "\n".join(lines),
-                title=f"{int(psutil.cpu_freq().current)} MHz",
+                title=title,
                 title_align="left",
+                subtitle=subtitle,
                 border_style="color(8)",
                 box=box.SQUARE,
             ),
@@ -161,9 +168,36 @@ class Mem(Widget):
 
 
 class ProcsList(Widget):
+    def on_mount(self):
+        self.collect_data()
+        self.set_interval(2.0, self.collect_data)
+
+    def collect_data(self):
+        self.processes = list(psutil.process_iter())
+        self.cpu_percent = [p.cpu_percent() for p in self.processes]
+        # sort by cpu_percent
+        self.idx = argsort(self.cpu_percent)[::-1]
+        self.refresh()
+
     def render(self) -> Panel:
+        table = Table(show_header=True, header_style="bold", box=box.MINIMAL)
+        table.add_column("pid", width=8, no_wrap=True)
+        table.add_column("program", style="color(2)", width=12, no_wrap=True)
+        table.add_column("args", width=12, no_wrap=True)
+        table.add_column("cpu%", style="color(2)", width=12, no_wrap=True)
+
+        table.padding = 0
+        table.border_style = "none"
+        for i in self.idx[:20]:
+            table.add_row(
+                str(self.processes[i].pid),
+                self.processes[i].name(),
+                " ".join(self.processes[i].cmdline()),
+                f"{self.cpu_percent[i]:.1f}",
+            )
+
         return Panel(
-            "Hello [b]ProcsList[/b]",
+            table,
             title="proc",
             title_align="left",
             border_style="color(6)",
@@ -186,10 +220,10 @@ class Net(Widget):
 class Xtop(App):
     async def on_mount(self) -> None:
         await self.view.dock(InfoLine(), edge="top", size=1, name="info")
-        await self.view.dock(CPU(), edge="top", size=16, name="cpu")
+        await self.view.dock(CPU(), edge="top", size=15, name="cpu")
         await self.view.dock(ProcsList(), edge="right", size=50, name="proc")
         await self.view.dock(Mem(), edge="top", size=20, name="mem")
-        await self.view.dock(Net(), edge="bottom", size=20, name="net")
+        await self.view.dock(Net(), edge="bottom", name="net")
 
     async def on_load(self, _):
         await self.bind("i", "view.toggle('info')", "Toggle info")
@@ -197,7 +231,7 @@ class Xtop(App):
         await self.bind("m", "view.toggle('mem')", "Toggle mem")
         await self.bind("n", "view.toggle('net')", "Toggle net")
         await self.bind("p", "view.toggle('proc')", "Toggle proc")
-        await self.bind("q", "quit")
+        await self.bind("q", "quit", "quit")
 
 
 Xtop.run()
