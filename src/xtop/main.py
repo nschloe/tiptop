@@ -1,13 +1,12 @@
-from datetime import datetime
-from math import ceil
 import os
 import socket
-
+import time
+from datetime import datetime, timedelta
+from math import ceil
 
 import psutil
 from rich import align, box
 from rich.panel import Panel
-from rich.table import Table
 from textual.app import App
 from textual.widget import Widget
 
@@ -59,16 +58,17 @@ def val_to_color(val: float, minval: float, maxval: float) -> str:
 
 class InfoLine(Widget):
     def render(self):
-        # return Panel(align.Align("hello", "left"), align.Align("x", "right"))
-        # return Columns(["x", "B", "CSDSDF"])
-        table = Table(border_style=None)
-        table.add_column("Released", justify="left", style="cyan", no_wrap=True)
-        table.add_column("Title", style="magenta")
-        table.add_column("Box Office", justify="right", style="green")
-
-        # return Panel("B")
-        time = datetime.now().strftime("%c")
-        return Panel(align.Align(f"[color(8)]{time}[/]", "center"))
+        now = datetime.now().strftime("%c")
+        uptime_s = time.time() - psutil.boot_time()
+        d = datetime(1, 1, 1) + timedelta(seconds=uptime_s)
+        return Panel(
+            align.Align(
+                f"[color(8)]{now}, up {d.day - 1} days, {d.hour}:{d.minute}[/]",
+                "center",
+            ),
+            border_style="color(8)",
+            box=box.SQUARE,
+        )
 
     def on_mount(self):
         self.set_interval(2.0, self.refresh)
@@ -113,23 +113,21 @@ class CPU(Widget):
         self.refresh()
 
     def render(self):
-        proc_lines = [
-            f"[b]P{k + 1:<2d}[/] [{color}]{graph} {int(round(data[-1])):3d}[/]%"
+        percent = int(round(self.cpu_percent_data[-1]))
+        lines = [
+                f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {percent:3d}%[/]  "
+                f"[color(5)]{self.total_temp_graph} {int(self.temp_total[-1])}°C[/]"
+            ]
+
+        lines += [
+            f"[b]P{k + 1:<2d}[/] [{color}]{graph} {int(round(data[-1])):3d}%[/]"
             for k, (data, graph, color) in enumerate(
                 zip(self.cpu_percent_indiv, self.graphs, self.colors)
             )
         ]
 
         load_avg = os.getloadavg()
-
-        lines = (
-            [
-                f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {int(round(self.cpu_percent_data[-1])):3d}[/]%  "
-                f"[color(5)]{self.total_temp_graph} {int(self.temp_total[-1])}[/]°C"
-            ]
-            + proc_lines
-            + [f"Load Avg:   {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"]
-        )
+        lines += [f"Load Avg:   {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"]
 
         p = align.Align(
             Panel(
@@ -183,13 +181,14 @@ class Net(Widget):
 
 class Xtop(App):
     async def on_mount(self) -> None:
-        await self.view.dock(InfoLine(), edge="top", size=4)
+        await self.view.dock(InfoLine(), edge="top", size=3, name="info")
         await self.view.dock(CPU(), edge="top", size=16, name="cpu")
         await self.view.dock(ProcsList(), edge="right", size=50, name="proc")
         await self.view.dock(Mem(), edge="top", size=20, name="mem")
         await self.view.dock(Net(), edge="bottom", size=20, name="net")
 
     async def on_load(self, _):
+        await self.bind("i", "view.toggle('info')", "Toggle info")
         await self.bind("c", "view.toggle('cpu')", "Toggle cpu")
         await self.bind("m", "view.toggle('mem')", "Toggle mem")
         await self.bind("n", "view.toggle('net')", "Toggle net")
