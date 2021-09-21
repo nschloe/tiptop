@@ -1,4 +1,5 @@
 from datetime import datetime
+from math import ceil
 import os
 import socket
 
@@ -11,10 +12,43 @@ from textual.app import App
 from textual.widget import Widget
 
 
-def val_to_braille(val: float, minval: float, maxval: float) -> str:
-    t = (val - minval) / (maxval - minval)
-    k = int(round(t * 3))
-    return {0: "⣀", 1: "⣤", 2: "⣶", 3: "⣿"}[k]
+def values_to_braille(values, minval: float, maxval: float) -> str:
+    assert len(values) % 2 == 0, len(values)
+    k = [ceil((val - minval) / (maxval - minval) * 4) for val in values]
+    # iterate over pairs
+    d = {
+        (0, 0): " ",
+        (0, 1): "⢀",
+        (0, 2): "⢠",
+        (0, 3): "⢰",
+        (0, 4): "⢸",
+        #
+        (1, 0): "⡀",
+        (1, 1): "⣀",
+        (1, 2): "⣠",
+        (1, 3): "⣰",
+        (1, 4): "⣸",
+        #
+        (2, 0): "⡄",
+        (2, 1): "⣄",
+        (2, 2): "⣤",
+        (2, 3): "⣴",
+        (2, 4): "⣼",
+        #
+        (3, 0): "⡆",
+        (3, 1): "⣆",
+        (3, 2): "⣦",
+        (3, 3): "⣶",
+        (3, 4): "⣾",
+        #
+        (4, 0): "⡇",
+        (4, 1): "⣇",
+        (4, 2): "⣧",
+        (4, 3): "⣷",
+        (4, 4): "⣿",
+    }
+    chars = [d[pair] for pair in zip(k[0::2], k[1::2])]
+    return "".join(chars)
 
 
 def val_to_color(val: float, minval: float, maxval: float) -> str:
@@ -32,9 +66,9 @@ class InfoLine(Widget):
         table.add_column("Title", style="magenta")
         table.add_column("Box Office", justify="right", style="green")
 
-        return Panel("B")
-        # time = datetime.now().strftime("%c")
-        # align.Align(f"[color(8)]{time}[/]", "center")
+        # return Panel("B")
+        time = datetime.now().strftime("%c")
+        return Panel(align.Align(f"[color(8)]{time}[/]", "center"))
 
     def on_mount(self):
         self.set_interval(2.0, self.refresh)
@@ -43,46 +77,55 @@ class InfoLine(Widget):
 class CPU(Widget):
     def on_mount(self):
         self.data = []
-        self.num_cores: int = psutil.cpu_count(logical=False)
-        self.num_threads: int = psutil.cpu_count(logical=True)
-        self.refresh_rate_s = 2.0
-        self.cpu_graph_total = 10 * " "
-        self.cpu_graph_indiv = [10 * " "] * 8
-        self.cpu_temp_total = 5 * " "
-        self.temp_low = 40.0
+        self.num_cores = psutil.cpu_count(logical=False)
+        self.num_threads = psutil.cpu_count(logical=True)
+        self.cpu_percent_data = [0.0] * 20
+        self.cpu_percent_indiv = [[0.0] * 20 for _ in range(self.num_threads)]
+        self.temp_low = 30.0
         self.temp_high = psutil.sensors_temperatures()["coretemp"][0].high
+        self.temp_total = [self.temp_low] * 10
 
-        self.set_interval(self.refresh_rate_s, self.refresh)
+        self.collect_data()
+        self.set_interval(2.0, self.collect_data)
+
+    def collect_data(self):
+        self.temp_total.pop(0)
+        self.temp_total.append(psutil.sensors_temperatures()["coretemp"][0].current)
+        self.total_temp_graph = values_to_braille(
+            self.temp_total, self.temp_low, self.temp_high
+        )
+
+        self.cpu_percent_data.pop(0)
+        self.cpu_percent_data.append(psutil.cpu_percent())
+        self.cpu_percent_graph = values_to_braille(self.cpu_percent_data, 0.0, 100.0)
+        self.color_total = val_to_color(self.cpu_percent_data[-1], 0.0, 100.0)
+
+        load_indiv = psutil.cpu_percent(percpu=True)
+        self.colors = []
+        self.graphs = []
+        for k in range(self.num_threads):
+            self.cpu_percent_indiv[k].pop(0)
+            self.cpu_percent_indiv[k].append(load_indiv[k])
+            self.graphs.append(values_to_braille(self.cpu_percent_indiv[k], 0.0, 100.0))
+            self.colors.append(val_to_color(load_indiv[k], 0.0, 100.0))
+
+        # textual method
+        self.refresh()
 
     def render(self):
-        load_total = psutil.cpu_percent()
-        temp_total = psutil.sensors_temperatures()["coretemp"][0].current
-        load_indiv = psutil.cpu_percent(percpu=True)
-        load_avg = os.getloadavg()
-
-        br = val_to_braille(temp_total, self.temp_low, self.temp_high)
-        self.cpu_temp_total = self.cpu_temp_total[1:] + br
-
-        br = val_to_braille(load_total, 0.0, 100.0)
-        color_total = val_to_color(load_total, 0.0, 100.0)
-        self.cpu_graph_total = self.cpu_graph_total[1:] + br
-        colors = []
-        for k in range(self.num_threads):
-            br = val_to_braille(load_indiv[k], 0.0, 100.0)
-            self.cpu_graph_indiv[k] = self.cpu_graph_indiv[k][1:] + br
-            colors.append(val_to_color(load_indiv[k], 0.0, 100.0))
-
         proc_lines = [
-            f"[b]P{k + 1:<2d}[/b] [{color}]{graph} {int(round(load)):3d}[/]%"
-            for k, (load, graph, color) in enumerate(
-                zip(load_indiv, self.cpu_graph_indiv, colors)
+            f"[b]P{k + 1:<2d}[/] [{color}]{graph} {int(round(data[-1])):3d}[/]%"
+            for k, (data, graph, color) in enumerate(
+                zip(self.cpu_percent_indiv, self.graphs, self.colors)
             )
         ]
 
+        load_avg = os.getloadavg()
+
         lines = (
             [
-                f"[b]CPU[/b] [{color_total}]{self.cpu_graph_total} {int(round(load_total)):3d}[/]%  "
-                f"[color(5)]{self.cpu_temp_total} {int(temp_total)}[/]°C"
+                f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {int(round(self.cpu_percent_data[-1])):3d}[/]%  "
+                f"[color(5)]{self.total_temp_graph} {int(self.temp_total[-1])}[/]°C"
             ]
             + proc_lines
             + [f"Load Avg:   {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"]
@@ -102,7 +145,6 @@ class CPU(Widget):
         return Panel(
             p, title=f"cpu", title_align="left", border_style="color(4)", box=box.SQUARE
         )
-
 
 
 class Mem(Widget):
@@ -139,7 +181,7 @@ class Net(Widget):
         )
 
 
-class SimpleApp(App):
+class Xtop(App):
     async def on_mount(self) -> None:
         await self.view.dock(InfoLine(), edge="top", size=4)
         await self.view.dock(CPU(), edge="top", size=16, name="cpu")
@@ -154,8 +196,5 @@ class SimpleApp(App):
         await self.bind("p", "view.toggle('proc')", "Toggle proc")
         await self.bind("q", "quit")
 
-    # async def action_color(self, color: str) -> None:
-    #     self.background = f"on {color}"
 
-
-SimpleApp.run(log="textual.log")
+Xtop.run()
