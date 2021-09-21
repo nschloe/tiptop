@@ -61,13 +61,15 @@ class InfoLine(Widget):
         now = datetime.now().strftime("%c")
         uptime_s = time.time() - psutil.boot_time()
         d = datetime(1, 1, 1) + timedelta(seconds=uptime_s)
-        return Panel(
-            align.Align(
-                f"[color(8)]{now}, up {d.day - 1} days, {d.hour}:{d.minute}[/]",
-                "center",
-            ),
-            border_style="color(8)",
-            box=box.SQUARE,
+
+        battery = psutil.sensors_battery().percent
+        return align.Align(
+            "[color(8)]"
+            + f"{now}, "
+            + f"up {d.day - 1} days, {d.hour}:{d.minute}, "
+            + f"BAT {round(battery)}%"
+            + "[/]",
+            "center",
         )
 
     def on_mount(self):
@@ -115,9 +117,9 @@ class CPU(Widget):
     def render(self):
         percent = int(round(self.cpu_percent_data[-1]))
         lines = [
-                f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {percent:3d}%[/]  "
-                f"[color(5)]{self.total_temp_graph} {int(self.temp_total[-1])}°C[/]"
-            ]
+            f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {percent:3d}%[/]  "
+            f"[color(5)]{self.total_temp_graph} {int(self.temp_total[-1])}°C[/]"
+        ]
 
         lines += [
             f"[b]P{k + 1:<2d}[/] [{color}]{graph} {int(round(data[-1])):3d}%[/]"
@@ -127,7 +129,9 @@ class CPU(Widget):
         ]
 
         load_avg = os.getloadavg()
-        lines += [f"Load Avg:   {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"]
+        lines += [
+            f"Load Avg:   {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
+        ]
 
         p = align.Align(
             Panel(
@@ -181,7 +185,7 @@ class Net(Widget):
 
 class Xtop(App):
     async def on_mount(self) -> None:
-        await self.view.dock(InfoLine(), edge="top", size=3, name="info")
+        await self.view.dock(InfoLine(), edge="top", size=1, name="info")
         await self.view.dock(CPU(), edge="top", size=16, name="cpu")
         await self.view.dock(ProcsList(), edge="right", size=50, name="proc")
         await self.view.dock(Mem(), edge="top", size=20, name="mem")
