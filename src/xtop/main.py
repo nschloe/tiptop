@@ -3,6 +3,7 @@ import socket
 import time
 from datetime import datetime, timedelta
 from math import ceil
+from typing import NamedTuple
 
 import psutil
 from rich import align, box
@@ -14,6 +15,17 @@ from textual.widget import Widget
 
 def argsort(seq):
     return sorted(range(len(seq)), key=seq.__getitem__)
+
+
+# https://stackoverflow.com/a/1094933/353337
+def sizeof_fmt(num):
+    assert num >= 0
+    for unit in ["B", "k", "M", "G", "T", "P", "E", "Z"]:
+        # actuall 1024, but be economical with the return string size:
+        if num < 1000:
+            return f"{round(num):3d}{unit}"
+        num /= 1024
+    return f"{round(num):3d}Y"
 
 
 def values_to_braille(values, minval: float, maxval: float) -> str:
@@ -140,27 +152,27 @@ class CPU(Widget):
 
         # threads 0 and 4 are in one core, display them next to each other
         cores = [(0, 4), (1, 5), (2, 6), (3, 7)]
-        for (i0, i1), temp_graph, core_temps in zip(cores, self.core_temp_graphs, self.core_temps):
+        for (i0, i1), temp_graph, core_temps in zip(
+            cores, self.core_temp_graphs, self.core_temps
+        ):
             lines += [
                 f"[{self.colors[i0]}]{self.graphs[i0]} "
                 + f"{round(self.cpu_percent_indiv[i0][-1]):3d}%[/] "
                 + f"[color(5)]{temp_graph} {round(core_temps[-1])}°C[/]",
                 f"[{self.colors[i1]}]{self.graphs[i1]} "
-                + f"{round(self.cpu_percent_indiv[i1][-1]):3d}%[/]"
+                + f"{round(self.cpu_percent_indiv[i1][-1]):3d}%[/]",
             ]
 
         title = ", ".join(
             [
                 f"{self.num_cores} cores",
                 f"{self.num_threads} threads",
-                f"{round(psutil.cpu_freq().current)} MHz",
             ]
         )
 
-        load_avg = os.getloadavg()
-        subtitle = (
-            f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
-        )
+        # load_avg = os.getloadavg()
+        # subtitle = f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
+        subtitle = f"{round(psutil.cpu_freq().current):4d} MHz"
 
         p = align.Align(
             Panel(
@@ -168,6 +180,7 @@ class CPU(Widget):
                 title=title,
                 title_align="left",
                 subtitle=subtitle,
+                subtitle_align="left",
                 border_style="color(8)",
                 box=box.SQUARE,
             ),
@@ -190,33 +203,68 @@ class Mem(Widget):
         )
 
 
+class ProcInfo(NamedTuple):
+    pid: int
+    name: str
+    cmdline: str
+    cpu_percent: float
+    num_threads: int
+    username: str
+    memory: int
+
+
 class ProcsList(Widget):
     def on_mount(self):
         self.collect_data()
         self.set_interval(6.0, self.collect_data)
 
     def collect_data(self):
-        self.processes = list(psutil.process_iter())
-        self.cpu_percent = [p.cpu_percent() for p in self.processes]
+        processes = list(psutil.process_iter())
+        cpu_percent = [p.cpu_percent() for p in processes]
         # sort by cpu_percent
-        self.idx = argsort(self.cpu_percent)[::-1]
+        idx = argsort(cpu_percent)[::-1]
+
+        # Pick top 20 and cache all values. The process might not be there anymore if we
+        # try to retrieve the details at a later time.
+        self.processes = []
+        for k in idx[:30]:
+            p = processes[k]
+            with p.oneshot():
+                self.processes.append(
+                    ProcInfo(
+                        p.pid,
+                        p.name(),
+                        p.cmdline(),
+                        p.cpu_percent(),
+                        p.num_threads(),
+                        p.username(),
+                        p.memory_info().rss,
+                    )
+                )
+
         self.refresh()
 
     def render(self) -> Panel:
-        table = Table(show_header=True, header_style="bold", box=box.MINIMAL)
-        table.add_column("pid", width=8, no_wrap=True)
-        table.add_column("program", style="color(2)", width=12, no_wrap=True)
-        table.add_column("args", width=12, no_wrap=True)
-        table.add_column("cpu%", style="color(2)", width=12, no_wrap=True)
+        table = Table(show_header=True, header_style="bold", box=None)
+        table.add_column("pid", min_width=6, no_wrap=True)
+        table.add_column("program", max_width=10, style="color(2)", no_wrap=True)
+        table.add_column("args", max_width=20, no_wrap=True)
+        table.add_column("thr", style="color(2)", no_wrap=True)
+        table.add_column("user", no_wrap=True)
+        table.add_column("memB", style="color(2)", no_wrap=True)
+        table.add_column("[u]cpu%[/]", style="color(2)", no_wrap=True)
 
         table.padding = 0
         table.border_style = "none"
-        for i in self.idx[:20]:
+        for p in self.processes:
             table.add_row(
-                str(self.processes[i].pid),
-                self.processes[i].name(),
-                " ".join(self.processes[i].cmdline()),
-                f"{self.cpu_percent[i]:.1f}",
+                str(p.pid),
+                p.name,
+                " ".join(p.cmdline[1:]),
+                f"{p.num_threads:3d}",
+                p.username,
+                sizeof_fmt(p.memory),
+                f"{p.cpu_percent:5.1f}",
             )
 
         return Panel(
@@ -244,7 +292,7 @@ class Xtop(App):
     async def on_mount(self) -> None:
         await self.view.dock(InfoLine(), edge="top", size=1, name="info")
         await self.view.dock(CPU(), edge="top", size=14, name="cpu")
-        await self.view.dock(ProcsList(), edge="right", size=50, name="proc")
+        await self.view.dock(ProcsList(), edge="right", size=70, name="proc")
         await self.view.dock(Mem(), edge="top", size=20, name="mem")
         await self.view.dock(Net(), edge="bottom", name="net")
 
