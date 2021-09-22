@@ -3,7 +3,6 @@ import socket
 import time
 from datetime import datetime, timedelta
 from math import ceil
-import itertools
 
 import psutil
 from rich import align, box
@@ -58,7 +57,7 @@ def values_to_braille(values, minval: float, maxval: float) -> str:
 
 def val_to_color(val: float, minval: float, maxval: float) -> str:
     t = (val - minval) / (maxval - minval)
-    k = int(round(t * 3))
+    k = round(t * 3)
     return {0: "color(4)", 1: "color(6)", 2: "color(6)", 3: "color(2)"}[k]
 
 
@@ -92,6 +91,7 @@ class CPU(Widget):
         self.temp_low = 30.0
         self.temp_high = psutil.sensors_temperatures()["coretemp"][0].high
         self.temp_total = [self.temp_low] * 10
+        self.core_temps = [[self.temp_low] * 10 for _ in range(self.num_cores)]
 
         self.collect_data()
         self.set_interval(2.0, self.collect_data)
@@ -102,6 +102,15 @@ class CPU(Widget):
         self.total_temp_graph = values_to_braille(
             self.temp_total, self.temp_low, self.temp_high
         )
+
+        for k in range(self.num_cores):
+            self.core_temps[k].pop(0)
+            self.core_temps[k].append(
+                psutil.sensors_temperatures()["coretemp"][k + 1].current
+            )
+        self.core_temp_graphs = [
+            values_to_braille(t, self.temp_low, self.temp_high) for t in self.core_temps
+        ]
 
         self.cpu_percent_data.pop(0)
         self.cpu_percent_data.append(psutil.cpu_percent())
@@ -121,23 +130,37 @@ class CPU(Widget):
         self.refresh()
 
     def render(self):
-        percent = int(round(self.cpu_percent_data[-1]))
-        lines = [
-            f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {percent:3d}%[/]  "
-            f"[color(5)]{self.total_temp_graph} {int(self.temp_total[-1])}°C[/]"
-        ]
+        lines = []
 
-        lines += [
-            f"[b]P{k + 1:<2d}[/] [{color}]{graph} {int(round(data[-1])):3d}%[/]"
-            for k, (data, graph, color) in enumerate(
-                zip(self.cpu_percent_indiv, self.graphs, self.colors)
-            )
-        ]
+        # percent = round(self.cpu_percent_data[-1])
+        # lines += [
+        #     f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {percent:3d}%[/]  "
+        #     f"[color(5)]{self.total_temp_graph} {int(self.temp_total[-1])}°C[/]"
+        # ]
 
-        title = f"{self.num_cores} cores, {self.num_threads} threads, {int(psutil.cpu_freq().current)} MHz"
+        # threads 0 and 4 are in one core, display them next to each other
+        cores = [(0, 4), (1, 5), (2, 6), (3, 7)]
+        for (i0, i1), temp_graph, core_temps in zip(cores, self.core_temp_graphs, self.core_temps):
+            lines += [
+                f"[{self.colors[i0]}]{self.graphs[i0]} "
+                + f"{round(self.cpu_percent_indiv[i0][-1]):3d}%[/] "
+                + f"[color(5)]{temp_graph} {round(core_temps[-1])}°C[/]",
+                f"[{self.colors[i1]}]{self.graphs[i1]} "
+                + f"{round(self.cpu_percent_indiv[i1][-1]):3d}%[/]"
+            ]
+
+        title = ", ".join(
+            [
+                f"{self.num_cores} cores",
+                f"{self.num_threads} threads",
+                f"{round(psutil.cpu_freq().current)} MHz",
+            ]
+        )
 
         load_avg = os.getloadavg()
-        subtitle = f"Load Avg:   {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
+        subtitle = (
+            f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
+        )
 
         p = align.Align(
             Panel(
@@ -159,7 +182,7 @@ class CPU(Widget):
 class Mem(Widget):
     def render(self) -> Panel:
         return Panel(
-            "Hello [b]Mem[/b]",
+            "",
             title="mem",
             title_align="left",
             border_style="color(2)",
@@ -170,7 +193,7 @@ class Mem(Widget):
 class ProcsList(Widget):
     def on_mount(self):
         self.collect_data()
-        self.set_interval(2.0, self.collect_data)
+        self.set_interval(6.0, self.collect_data)
 
     def collect_data(self):
         self.processes = list(psutil.process_iter())
@@ -209,7 +232,7 @@ class Net(Widget):
     def render(self) -> Panel:
         ip = socket.gethostbyname(socket.gethostname())
         return Panel(
-            "Hello [b]Net[/b]",
+            "",
             title=f"net - {ip}",
             title_align="left",
             border_style="color(1)",
@@ -220,7 +243,7 @@ class Net(Widget):
 class Xtop(App):
     async def on_mount(self) -> None:
         await self.view.dock(InfoLine(), edge="top", size=1, name="info")
-        await self.view.dock(CPU(), edge="top", size=15, name="cpu")
+        await self.view.dock(CPU(), edge="top", size=14, name="cpu")
         await self.view.dock(ProcsList(), edge="right", size=50, name="proc")
         await self.view.dock(Mem(), edge="top", size=20, name="mem")
         await self.view.dock(Net(), edge="bottom", name="net")
