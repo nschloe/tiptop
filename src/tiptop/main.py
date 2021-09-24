@@ -65,7 +65,7 @@ class CPU(Widget):
         self.num_cores = psutil.cpu_count(logical=False)
         self.num_threads = psutil.cpu_count(logical=True)
 
-        self.cpu_total_stream = BrailleStream(40, 8, 0.0, 100.0)
+        self.cpu_total_stream = BrailleStream(50, 6, 0.0, 100.0)
 
         self.cpu_percent_streams = [
             BrailleStream(10, 1, 0.0, 100.0)
@@ -73,48 +73,63 @@ class CPU(Widget):
             # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(self.num_threads)
         ]
 
-        temp_low = 30.0
+        temp_low = 20.0
         temp_high = psutil.sensors_temperatures()["coretemp"][0].high
+        self.temp_total_stream = BrailleStream(50, 6, temp_low, temp_high, flipud=True)
         self.core_temp_streams = [
             BrailleStream(5, 1, temp_low, temp_high) for _ in range(self.num_cores)
         ]
 
-        self.collect_data()
-        self.set_interval(2.0, self.collect_data)
-
         self.box_title = ", ".join(
             [
-                f"{self.num_cores} cores",
                 f"{self.num_threads} threads",
+                f"{self.num_cores} cores",
             ]
         )
 
-    def collect_data(self):
-        self.cpu_total_stream.add_value(psutil.cpu_percent())
+        self.collect_data()
+        self.set_interval(2.0, self.collect_data)
 
+    def collect_data(self):
+        # CPU loads
+        self.cpu_total_stream.add_value(psutil.cpu_percent())
+        #
         load_indiv = psutil.cpu_percent(percpu=True)
         self.cpu_percent_colors = [val_to_color(val, 0.0, 100.0) for val in load_indiv]
         for stream, load in zip(self.cpu_percent_streams, load_indiv):
             stream.add_value(load)
 
-        # self.temp_total.pop(0)
-        # self.temp_total.append(psutil.sensors_temperatures()["coretemp"][0].current)
-
-        for stream, temp in zip(
-            self.core_temp_streams, psutil.sensors_temperatures()["coretemp"][1:]
-        ):
+        # CPU temperatures
+        temps = psutil.sensors_temperatures()["coretemp"]
+        self.temp_total_stream.add_value(temps[0].current)
+        #
+        for stream, temp in zip(self.core_temp_streams, temps[1:]):
             stream.add_value(temp.current)
 
         # textual method
         self.refresh()
 
     def render(self):
-        lines = self.cpu_total_stream.graph
+        lines_cpu = self.cpu_total_stream.graph
         last_val_string = f"{self.cpu_total_stream.last_value:5.1f}%"
-        lines0 = lines[0][: -len(last_val_string)] + last_val_string
-        lines = [lines0] + lines[1:]
+        lines0 = lines_cpu[0][: -len(last_val_string)] + last_val_string
+        lines_cpu = [lines0] + lines_cpu[1:]
+        #
+        lines_temp = self.temp_total_stream.graph
+        last_val_string = f"{round(self.temp_total_stream.last_value):3d}°C"
+        lines0 = lines_temp[-1][: -len(last_val_string)] + last_val_string
+        lines_temp = lines_temp[:-1] + [lines0]
+
         cpu_total_box = align.Align(
-            Panel("[color(4)]" + "\n".join(lines) + "[/]"), "left"
+            Panel(
+                "[color(4)]"
+                + "\n".join(lines_cpu)
+                + "[/]\n"
+                + "[color(5)]"
+                + "\n".join(lines_temp)
+                + "[/]"
+            ),
+            "left",
         )
 
         # percent = round(self.cpu_percent_data[-1])
