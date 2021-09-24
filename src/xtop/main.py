@@ -1,16 +1,74 @@
-import os
 import socket
 import time
 from datetime import datetime, timedelta
 from math import ceil
-from typing import NamedTuple
+from typing import List, NamedTuple
 
 import psutil
 from rich import align, box
+from rich.columns import Columns
 from rich.panel import Panel
 from rich.table import Table
 from textual.app import App
+from textual.message_pump import CallbackError
 from textual.widget import Widget
+
+num_to_braille = {
+    (0, 0): " ",
+    (0, 1): "⢀",
+    (0, 2): "⢠",
+    (0, 3): "⢰",
+    (0, 4): "⢸",
+    #
+    (1, 0): "⡀",
+    (1, 1): "⣀",
+    (1, 2): "⣠",
+    (1, 3): "⣰",
+    (1, 4): "⣸",
+    #
+    (2, 0): "⡄",
+    (2, 1): "⣄",
+    (2, 2): "⣤",
+    (2, 3): "⣴",
+    (2, 4): "⣼",
+    #
+    (3, 0): "⡆",
+    (3, 1): "⣆",
+    (3, 2): "⣦",
+    (3, 3): "⣶",
+    (3, 4): "⣾",
+    #
+    (4, 0): "⡇",
+    (4, 1): "⣇",
+    (4, 2): "⣧",
+    (4, 3): "⣷",
+    (4, 4): "⣿",
+}
+
+
+class BrailleStream:
+    def __init__(self, num_chars: int, minval: float, maxval: float):
+        self._graphs = [" " * num_chars, " " * num_chars]
+        self.minval = minval
+        self.maxval = maxval
+        self._last_k = 0
+        self.last_value: float = minval
+
+    def add_value(self, value):
+        k = ceil((value - self.minval) / (self.maxval - self.minval) * 4)
+        char = num_to_braille[(self._last_k, k)]
+
+        # roll list
+        self._graphs.append(self._graphs.pop(0))
+        # update stream
+        self._graphs[0] = self._graphs[0][1:] + char
+
+        self.last_value = value
+        self._last_k = k
+
+    @property
+    def graph(self):
+        return self._graphs[0]
 
 
 def argsort(seq):
@@ -67,6 +125,14 @@ def values_to_braille(values, minval: float, maxval: float) -> str:
     return "".join(chars)
 
 
+# def values_to_braille_tall(
+#     values, minval: float, maxval: float, height: int
+# ) -> List[str]:
+#     k = [ceil((val - minval) / (maxval - minval) * 4 * height) for val in values]
+#
+#     return
+
+
 def val_to_color(val: float, minval: float, maxval: float) -> str:
     t = (val - minval) / (maxval - minval)
     k = round(t * 3)
@@ -98,86 +164,79 @@ class CPU(Widget):
         self.data = []
         self.num_cores = psutil.cpu_count(logical=False)
         self.num_threads = psutil.cpu_count(logical=True)
-        self.cpu_percent_data = [0.0] * 20
-        self.cpu_percent_indiv = [[0.0] * 20 for _ in range(self.num_threads)]
-        self.temp_low = 30.0
-        self.temp_high = psutil.sensors_temperatures()["coretemp"][0].high
-        self.temp_total = [self.temp_low] * 10
-        self.core_temps = [[self.temp_low] * 10 for _ in range(self.num_cores)]
+
+        self.cpu_percent_streams = [
+            BrailleStream(10, 0.0, 100.0) for _ in range(self.num_threads)
+        ]
+
+        temp_low = 30.0
+        temp_high = psutil.sensors_temperatures()["coretemp"][0].high
+        self.core_temp_streams = [
+            BrailleStream(10, temp_low, temp_high) for _ in range(self.num_cores)
+        ]
 
         self.collect_data()
         self.set_interval(2.0, self.collect_data)
 
-    def collect_data(self):
-        self.temp_total.pop(0)
-        self.temp_total.append(psutil.sensors_temperatures()["coretemp"][0].current)
-        self.total_temp_graph = values_to_braille(
-            self.temp_total, self.temp_low, self.temp_high
-        )
-
-        for k in range(self.num_cores):
-            self.core_temps[k].pop(0)
-            self.core_temps[k].append(
-                psutil.sensors_temperatures()["coretemp"][k + 1].current
-            )
-        self.core_temp_graphs = [
-            values_to_braille(t, self.temp_low, self.temp_high) for t in self.core_temps
-        ]
-
-        self.cpu_percent_data.pop(0)
-        self.cpu_percent_data.append(psutil.cpu_percent())
-        self.cpu_percent_graph = values_to_braille(self.cpu_percent_data, 0.0, 100.0)
-        self.color_total = val_to_color(self.cpu_percent_data[-1], 0.0, 100.0)
-
-        load_indiv = psutil.cpu_percent(percpu=True)
-        self.colors = []
-        self.graphs = []
-        for k in range(self.num_threads):
-            self.cpu_percent_indiv[k].pop(0)
-            self.cpu_percent_indiv[k].append(load_indiv[k])
-            self.graphs.append(values_to_braille(self.cpu_percent_indiv[k], 0.0, 100.0))
-            self.colors.append(val_to_color(load_indiv[k], 0.0, 100.0))
-
-        # textual method
-        self.refresh()
-
-    def render(self):
-        lines = []
-
-        # percent = round(self.cpu_percent_data[-1])
-        # lines += [
-        #     f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {percent:3d}%[/]  "
-        #     f"[color(5)]{self.total_temp_graph} {int(self.temp_total[-1])}°C[/]"
-        # ]
-
-        # threads 0 and 4 are in one core, display them next to each other
-        cores = [(0, 4), (1, 5), (2, 6), (3, 7)]
-        for (i0, i1), temp_graph, core_temps in zip(
-            cores, self.core_temp_graphs, self.core_temps
-        ):
-            lines += [
-                f"[{self.colors[i0]}]{self.graphs[i0]} "
-                + f"{round(self.cpu_percent_indiv[i0][-1]):3d}%[/] "
-                + f"[color(5)]{temp_graph} {round(core_temps[-1])}°C[/]",
-                f"[{self.colors[i1]}]{self.graphs[i1]} "
-                + f"{round(self.cpu_percent_indiv[i1][-1]):3d}%[/]",
-            ]
-
-        title = ", ".join(
+        self.box_title = ", ".join(
             [
                 f"{self.num_cores} cores",
                 f"{self.num_threads} threads",
             ]
         )
 
+    def collect_data(self):
+        # self.temp_total.pop(0)
+        # self.temp_total.append(psutil.sensors_temperatures()["coretemp"][0].current)
+        # self.total_temp_graph = values_to_braille(
+        #     self.temp_total, self.temp_low, self.temp_high
+        # )
+
+        for stream, temp in zip(
+            self.core_temp_streams, psutil.sensors_temperatures()["coretemp"][1:]
+        ):
+            stream.add_value(temp)
+
+        # self.cpu_percent_data.pop(0)
+        # self.cpu_percent_data.append(psutil.cpu_percent())
+        # self.cpu_percent_graph = values_to_braille(self.cpu_percent_data, 0.0, 100.0)
+        # self.color_total = val_to_color(self.cpu_percent_data[-1], 0.0, 100.0)
+
+        load_indiv = psutil.cpu_percent(percpu=True)
+        self.cpu_percent_colors = [val_to_color(val, 0.0, 100.0) for val in load_indiv]
+        for stream, load in zip(self.cpu_percent_streams, load_indiv):
+            stream.add_value(load)
+
+        # textual method
+        self.refresh()
+
+    def render(self):
+        # percent = round(self.cpu_percent_data[-1])
+        # lines += [
+        #     f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {percent:3d}%[/]  "
+        #     f"[color(5)]{self.total_temp_graph} {int(self.temp_total[-1])}°C[/]"
+        # ]
+
+        # threads 0 and 4 are in one core, display them next to each other, etc.
+        cores = [0, 4, 1, 5, 2, 6, 3, 7]
+        lines = [
+            f"[{self.cpu_percent_colors[i]}]"
+            + f"{self.cpu_percent_streams[i].graph} "
+            + f"{round(self.cpu_percent_streams[i].last_value):3d}%[/]"
+            for i in cores
+        ]
+        # add temperature in every other line
+        for k, stream in enumerate(self.core_temp_streams):
+            lines[2 * k] += f" [color(5)]{stream.graph} {round(stream.last_value)}°C[/]"
+
         # load_avg = os.getloadavg()
         # subtitle = f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
         subtitle = f"{round(psutil.cpu_freq().current):4d} MHz"
 
-        p = align.Align(
+        info_box = align.Align(
             Panel(
                 "\n".join(lines),
-                title=title,
+                title=self.box_title,
                 title_align="left",
                 subtitle=subtitle,
                 subtitle_align="left",
@@ -187,8 +246,16 @@ class CPU(Widget):
             "right",
             vertical="middle",
         )
+
+        t = Table.grid(expand=True)
+        t.add_column("full", no_wrap=True)
+        t.add_column("box", no_wrap=True)
+        # t.add_row(", ".join(["dasdas\n"] * 100), info_box)
+        t.add_row("ghtryhFESAD", info_box)
+        # c = Columns(["dasdas", info_box], expand=True)
+
         return Panel(
-            p, title=f"cpu", title_align="left", border_style="color(4)", box=box.SQUARE
+            t, title=f"cpu", title_align="left", border_style="color(4)", box=box.SQUARE
         )
 
 
@@ -230,17 +297,20 @@ class ProcsList(Widget):
         for k in idx[:30]:
             p = processes[k]
             with p.oneshot():
-                self.processes.append(
-                    ProcInfo(
-                        p.pid,
-                        p.name(),
-                        p.cmdline(),
-                        p.cpu_percent(),
-                        p.num_threads(),
-                        p.username(),
-                        p.memory_info().rss,
+                try:
+                    self.processes.append(
+                        ProcInfo(
+                            p.pid,
+                            p.name(),
+                            p.cmdline(),
+                            cpu_percent[k],
+                            p.num_threads(),
+                            p.username(),
+                            p.memory_info().rss,
+                        )
                     )
-                )
+                except CallbackError:
+                    pass
 
         self.refresh()
 
@@ -249,16 +319,16 @@ class ProcsList(Widget):
         table.add_column("pid", min_width=6, no_wrap=True)
         table.add_column("program", max_width=10, style="color(2)", no_wrap=True)
         table.add_column("args", max_width=20, no_wrap=True)
-        table.add_column("thr", style="color(2)", no_wrap=True)
+        table.add_column("#th", width=3, style="color(2)", no_wrap=True)
         table.add_column("user", no_wrap=True)
         table.add_column("memB", style="color(2)", no_wrap=True)
-        table.add_column("[u]cpu%[/]", style="color(2)", no_wrap=True)
+        table.add_column("[u]cpu%[/]", width=5, style="color(2)", no_wrap=True)
 
         table.padding = 0
         table.border_style = "none"
         for p in self.processes:
             table.add_row(
-                str(p.pid),
+                f"{p.pid:6d}",
                 p.name,
                 " ".join(p.cmdline[1:]),
                 f"{p.num_threads:3d}",
