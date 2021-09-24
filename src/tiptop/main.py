@@ -307,7 +307,7 @@ class Net(Widget):
         )
 
 
-class Xtop(App):
+class TiptopApp(App):
     async def on_mount(self) -> None:
         await self.view.dock(InfoLine(), edge="top", size=1, name="info")
         await self.view.dock(CPU(), edge="top", size=14, name="cpu")
@@ -324,4 +324,4 @@ class Xtop(App):
         await self.bind("q", "quit", "quit")
 
 
-Xtop.run()
+TiptopApp.run()

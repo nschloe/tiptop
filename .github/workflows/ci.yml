@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+      - name: Run pre-commit
+        uses: pre-commit/action@v2.0.3
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+    steps:
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/checkout@v2
+    - name: Test with tox
+      run: |
+        pip install tox
+        tox -- --cov pyfoobar --cov-report xml --cov-report term
+    - name: Submit to codecov
+      uses: codecov/codecov-action@v1
+      if: ${{ matrix.python-version == '3.9' }}
