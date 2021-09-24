@@ -2,7 +2,7 @@ import socket
 import time
 from datetime import datetime, timedelta
 from math import ceil
-from typing import List, NamedTuple
+from typing import NamedTuple
 
 import psutil
 from rich import align, box
@@ -86,53 +86,6 @@ def sizeof_fmt(num):
     return f"{round(num):3d}Y"
 
 
-def values_to_braille(values, minval: float, maxval: float) -> str:
-    assert len(values) % 2 == 0, len(values)
-    k = [ceil((val - minval) / (maxval - minval) * 4) for val in values]
-    # iterate over pairs
-    d = {
-        (0, 0): " ",
-        (0, 1): "⢀",
-        (0, 2): "⢠",
-        (0, 3): "⢰",
-        (0, 4): "⢸",
-        #
-        (1, 0): "⡀",
-        (1, 1): "⣀",
-        (1, 2): "⣠",
-        (1, 3): "⣰",
-        (1, 4): "⣸",
-        #
-        (2, 0): "⡄",
-        (2, 1): "⣄",
-        (2, 2): "⣤",
-        (2, 3): "⣴",
-        (2, 4): "⣼",
-        #
-        (3, 0): "⡆",
-        (3, 1): "⣆",
-        (3, 2): "⣦",
-        (3, 3): "⣶",
-        (3, 4): "⣾",
-        #
-        (4, 0): "⡇",
-        (4, 1): "⣇",
-        (4, 2): "⣧",
-        (4, 3): "⣷",
-        (4, 4): "⣿",
-    }
-    chars = [d[pair] for pair in zip(k[0::2], k[1::2])]
-    return "".join(chars)
-
-
-# def values_to_braille_tall(
-#     values, minval: float, maxval: float, height: int
-# ) -> List[str]:
-#     k = [ceil((val - minval) / (maxval - minval) * 4 * height) for val in values]
-#
-#     return
-
-
 def val_to_color(val: float, minval: float, maxval: float) -> str:
     t = (val - minval) / (maxval - minval)
     k = round(t * 3)
@@ -188,18 +141,14 @@ class CPU(Widget):
     def collect_data(self):
         # self.temp_total.pop(0)
         # self.temp_total.append(psutil.sensors_temperatures()["coretemp"][0].current)
-        # self.total_temp_graph = values_to_braille(
-        #     self.temp_total, self.temp_low, self.temp_high
-        # )
 
         for stream, temp in zip(
             self.core_temp_streams, psutil.sensors_temperatures()["coretemp"][1:]
         ):
-            stream.add_value(temp)
+            stream.add_value(temp.current)
 
         # self.cpu_percent_data.pop(0)
         # self.cpu_percent_data.append(psutil.cpu_percent())
-        # self.cpu_percent_graph = values_to_braille(self.cpu_percent_data, 0.0, 100.0)
         # self.color_total = val_to_color(self.cpu_percent_data[-1], 0.0, 100.0)
 
         load_indiv = psutil.cpu_percent(percpu=True)
