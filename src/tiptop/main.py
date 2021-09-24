@@ -111,9 +111,11 @@ class CPU(Widget):
     def render(self):
         lines = self.cpu_total_stream.graph
         last_val_string = f"{self.cpu_total_stream.last_value:5.1f}%"
-        lines0 = lines[0][:-len(last_val_string)] + last_val_string
+        lines0 = lines[0][: -len(last_val_string)] + last_val_string
         lines = [lines0] + lines[1:]
-        cpu_total_box = align.Align(Panel("[color(4)]" + "\n".join(lines) + "[/]"), "left")
+        cpu_total_box = align.Align(
+            Panel("[color(4)]" + "\n".join(lines) + "[/]"), "left"
+        )
 
         # percent = round(self.cpu_percent_data[-1])
         # lines += [
