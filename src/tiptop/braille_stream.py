@@ -24,7 +24,9 @@ class BrailleStream:
     def add_value(self, value):
         k = ceil((value - self.minval) / (self.maxval - self.minval) * 4 * self.height)
 
-        blocks = [4] * (k // 4) + [k % 4]
+        blocks = [4] * (k // 4)
+        if k % 4 > 0:
+            blocks += [k % 4]
         blocks += [0] * (self.height - len(blocks))
 
         chars = [num_to_braille[i0][i1] for i0, i1 in zip(self._last_blocks, blocks)]

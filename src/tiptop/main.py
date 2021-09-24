@@ -4,6 +4,9 @@ from datetime import datetime, timedelta
 from typing import NamedTuple
 
 import psutil
+
+# TODO relative imports
+from braille_stream import BrailleStream
 from rich import align, box
 from rich.columns import Columns
 from rich.panel import Panel
@@ -12,8 +15,6 @@ from textual.app import App
 from textual.message_pump import CallbackError
 from textual.widget import Widget
 
-# TODO relative imports
-from braille_stream import BrailleStream
 # from blockchar_stream import BlockCharStream
 
 
@@ -64,16 +65,18 @@ class CPU(Widget):
         self.num_cores = psutil.cpu_count(logical=False)
         self.num_threads = psutil.cpu_count(logical=True)
 
+        self.cpu_total_stream = BrailleStream(30, 8, 0.0, 100.0)
+
         self.cpu_percent_streams = [
-            BrailleStream(10, 0.0, 100.0)
+            BrailleStream(10, 1, 0.0, 100.0)
             for _ in range(self.num_threads)
-            # BlockCharStream(10, 0.0, 100.0) for _ in range(self.num_threads)
+            # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(self.num_threads)
         ]
 
         temp_low = 30.0
         temp_high = psutil.sensors_temperatures()["coretemp"][0].high
         self.core_temp_streams = [
-            BrailleStream(10, temp_low, temp_high) for _ in range(self.num_cores)
+            BrailleStream(10, 1, temp_low, temp_high) for _ in range(self.num_cores)
         ]
 
         self.collect_data()
@@ -87,6 +90,13 @@ class CPU(Widget):
         )
 
     def collect_data(self):
+        self.cpu_total_stream.add_value(psutil.cpu_percent())
+
+        load_indiv = psutil.cpu_percent(percpu=True)
+        self.cpu_percent_colors = [val_to_color(val, 0.0, 100.0) for val in load_indiv]
+        for stream, load in zip(self.cpu_percent_streams, load_indiv):
+            stream.add_value(load)
+
         # self.temp_total.pop(0)
         # self.temp_total.append(psutil.sensors_temperatures()["coretemp"][0].current)
 
@@ -95,19 +105,14 @@ class CPU(Widget):
         ):
             stream.add_value(temp.current)
 
-        # self.cpu_percent_data.pop(0)
-        # self.cpu_percent_data.append(psutil.cpu_percent())
-        # self.color_total = val_to_color(self.cpu_percent_data[-1], 0.0, 100.0)
-
-        load_indiv = psutil.cpu_percent(percpu=True)
-        self.cpu_percent_colors = [val_to_color(val, 0.0, 100.0) for val in load_indiv]
-        for stream, load in zip(self.cpu_percent_streams, load_indiv):
-            stream.add_value(load)
-
         # textual method
         self.refresh()
 
     def render(self):
+
+        cpu_total_box = align.Align(
+            Panel("\n".join(self.cpu_total_stream.graph)), "left"
+        )
         # percent = round(self.cpu_percent_data[-1])
         # lines += [
         #     f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {percent:3d}%[/]  "
@@ -118,13 +123,15 @@ class CPU(Widget):
         cores = [0, 4, 1, 5, 2, 6, 3, 7]
         lines = [
             f"[{self.cpu_percent_colors[i]}]"
-            + f"{self.cpu_percent_streams[i].graph} "
+            + f"{self.cpu_percent_streams[i].graph[0]} "
             + f"{round(self.cpu_percent_streams[i].last_value):3d}%[/]"
             for i in cores
         ]
         # add temperature in every other line
         for k, stream in enumerate(self.core_temp_streams):
-            lines[2 * k] += f" [color(5)]{stream.graph} {round(stream.last_value)}°C[/]"
+            lines[
+                2 * k
+            ] += f" [color(5)]{stream.graph[0]} {round(stream.last_value)}°C[/]"
 
         # load_avg = os.getloadavg()
         # subtitle = f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
@@ -148,7 +155,7 @@ class CPU(Widget):
         t.add_column("full", no_wrap=True)
         t.add_column("box", no_wrap=True)
         # t.add_row(", ".join(["dasdas\n"] * 100), info_box)
-        t.add_row("ghtryhFESAD", info_box)
+        t.add_row(cpu_total_box, info_box)
         # c = Columns(["dasdas", info_box], expand=True)
 
         return Panel(
@@ -193,8 +200,8 @@ class ProcsList(Widget):
         self.processes = []
         for k in idx[:30]:
             p = processes[k]
-            with p.oneshot():
-                try:
+            try:
+                with p.oneshot():
                     self.processes.append(
                         ProcInfo(
                             p.pid,
@@ -206,8 +213,8 @@ class ProcsList(Widget):
                             p.memory_info().rss,
                         )
                     )
-                except CallbackError:
-                    pass
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
 
         self.refresh()
 
