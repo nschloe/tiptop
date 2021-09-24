@@ -1,7 +1,6 @@
 import socket
 import time
 from datetime import datetime, timedelta
-from math import ceil
 from typing import NamedTuple
 
 import psutil
@@ -15,7 +14,7 @@ from textual.widget import Widget
 
 # TODO relative imports
 from braille_stream import BrailleStream
-from blockchar_stream import BlockCharStream
+# from blockchar_stream import BlockCharStream
 
 
 def argsort(seq):
