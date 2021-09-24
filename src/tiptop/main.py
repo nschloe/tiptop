@@ -8,14 +8,10 @@ import psutil
 # TODO relative imports
 from braille_stream import BrailleStream
 from rich import align, box
-from rich.columns import Columns
 from rich.panel import Panel
 from rich.table import Table
 from textual.app import App
-from textual.message_pump import CallbackError
 from textual.widget import Widget
-
-# from blockchar_stream import BlockCharStream
 
 
 def argsort(seq):
@@ -26,7 +22,7 @@ def argsort(seq):
 def sizeof_fmt(num):
     assert num >= 0
     for unit in ["B", "k", "M", "G", "T", "P", "E", "Z"]:
-        # actuall 1024, but be economical with the return string size:
+        # actually 1024, but be economical with the return string size:
         if num < 1000:
             return f"{round(num):3d}{unit}"
         num /= 1024
@@ -183,9 +179,23 @@ class CPU(Widget):
 
 
 class Mem(Widget):
+    def on_mount(self):
+        self.mem_total_str = sizeof_fmt(psutil.virtual_memory().total)
+
+        self.free_mem_stream = BrailleStream(20, 4, 0.0, self.mem_total_str)
+
+        self.collect_data()
+        self.set_interval(2.0, self.collect_data)
+
+    def collect_data(self):
+        self.free_mem_stream.add_value(psutil.virtual_memory().available)
+        self.refresh()
+
     def render(self) -> Panel:
+        p = Panel("[color(2)]" + "\n".join(self.free_mem_stream.graph) + "[/]")
         return Panel(
-            "",
+            # f"{self.mem_total_str}",
+            p,
             title="mem",
             title_align="left",
             border_style="color(2)",
