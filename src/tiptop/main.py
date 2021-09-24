@@ -65,7 +65,7 @@ class CPU(Widget):
         self.num_cores = psutil.cpu_count(logical=False)
         self.num_threads = psutil.cpu_count(logical=True)
 
-        self.cpu_total_stream = BrailleStream(30, 8, 0.0, 100.0)
+        self.cpu_total_stream = BrailleStream(40, 8, 0.0, 100.0)
 
         self.cpu_percent_streams = [
             BrailleStream(10, 1, 0.0, 100.0)
@@ -76,7 +76,7 @@ class CPU(Widget):
         temp_low = 30.0
         temp_high = psutil.sensors_temperatures()["coretemp"][0].high
         self.core_temp_streams = [
-            BrailleStream(10, 1, temp_low, temp_high) for _ in range(self.num_cores)
+            BrailleStream(5, 1, temp_low, temp_high) for _ in range(self.num_cores)
         ]
 
         self.collect_data()
@@ -109,10 +109,12 @@ class CPU(Widget):
         self.refresh()
 
     def render(self):
+        lines = self.cpu_total_stream.graph
+        last_val_string = f"{self.cpu_total_stream.last_value:5.1f}%"
+        lines0 = lines[0][:-len(last_val_string)] + last_val_string
+        lines = [lines0] + lines[1:]
+        cpu_total_box = align.Align(Panel("[color(4)]" + "\n".join(lines) + "[/]"), "left")
 
-        cpu_total_box = align.Align(
-            Panel("\n".join(self.cpu_total_stream.graph)), "left"
-        )
         # percent = round(self.cpu_percent_data[-1])
         # lines += [
         #     f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {percent:3d}%[/]  "
