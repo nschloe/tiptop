@@ -66,7 +66,8 @@ class CPU(Widget):
         self.num_threads = psutil.cpu_count(logical=True)
 
         self.cpu_percent_streams = [
-            BrailleStream(10, 0.0, 100.0) for _ in range(self.num_threads)
+            BrailleStream(10, 0.0, 100.0)
+            for _ in range(self.num_threads)
             # BlockCharStream(10, 0.0, 100.0) for _ in range(self.num_threads)
         ]
 
@@ -255,21 +256,43 @@ class Net(Widget):
         )
 
 
+# class TiptopApp(App):
+#     async def on_mount(self) -> None:
+#         await self.view.dock(InfoLine(), edge="top", size=1, name="info")
+#         await self.view.dock(CPU(), edge="top", size=14, name="cpu")
+#         await self.view.dock(ProcsList(), edge="right", size=70, name="proc")
+#         await self.view.dock(Mem(), edge="top", size=20, name="mem")
+#         await self.view.dock(Net(), edge="bottom", name="net")
+#
+#     async def on_load(self, _):
+#         await self.bind("i", "view.toggle('info')", "Toggle info")
+#         await self.bind("c", "view.toggle('cpu')", "Toggle cpu")
+#         await self.bind("m", "view.toggle('mem')", "Toggle mem")
+#         await self.bind("n", "view.toggle('net')", "Toggle net")
+#         await self.bind("p", "view.toggle('proc')", "Toggle proc")
+#         await self.bind("q", "quit", "quit")
+
+
+# with a grid
 class TiptopApp(App):
     async def on_mount(self) -> None:
-        await self.view.dock(InfoLine(), edge="top", size=1, name="info")
-        await self.view.dock(CPU(), edge="top", size=14, name="cpu")
-        await self.view.dock(ProcsList(), edge="right", size=70, name="proc")
-        await self.view.dock(Mem(), edge="top", size=20, name="mem")
-        await self.view.dock(Net(), edge="bottom", name="net")
+        grid = await self.view.dock_grid(edge="left")
 
-    async def on_load(self, _):
-        await self.bind("i", "view.toggle('info')", "Toggle info")
-        await self.bind("c", "view.toggle('cpu')", "Toggle cpu")
-        await self.bind("m", "view.toggle('mem')", "Toggle mem")
-        await self.bind("n", "view.toggle('net')", "Toggle net")
-        await self.bind("p", "view.toggle('proc')", "Toggle proc")
-        await self.bind("q", "quit", "quit")
+        grid.add_column(fraction=1, name="left")
+        grid.add_column(fraction=1, name="right")
+
+        grid.add_row(fraction=1, name="top")
+        grid.add_row(fraction=1, name="center")
+        grid.add_row(fraction=1, name="bottom")
+
+        grid.add_areas(
+            area1="left-start|right-end,top",
+            area2="left,center",
+            area3="left,bottom",
+            area4="right,center-start|bottom-end",
+        )
+
+        grid.place(area1=CPU(), area2=Mem(), area3=Net(), area4=ProcsList())
 
 
 TiptopApp.run()
