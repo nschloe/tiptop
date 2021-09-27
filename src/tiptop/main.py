@@ -1,8 +1,11 @@
+import platform
 import socket
 import time
 from datetime import datetime, timedelta
 from typing import NamedTuple
 
+import cpuinfo
+import distro
 import psutil
 
 # TODO relative imports
@@ -40,21 +43,39 @@ def val_to_color(val: float, minval: float, maxval: float) -> str:
 class InfoLine(Widget):
     def on_mount(self):
         self.set_interval(2.0, self.refresh)
+        ri = distro.os_release_info()
+        # + f"[b]{platform.node()}[/]"
+        #     + f" {self.distro_string}"
+        self.left_string = " ".join(
+            [
+                f"[b]{platform.node()}[/]",
+                f"{ri['name']} {ri['version_id']}",
+                f"{platform.architecture()[0]} / {platform.release()}",
+            ]
+        )
 
     def render(self):
-        now = datetime.now().strftime("%c")
+        # now = datetime.now().strftime("%c")
+
+        table = Table(show_header=False, expand=True, box=None, padding=0)
+        table.add_column(justify="left", no_wrap=True)
+        table.add_column(justify="right", no_wrap=True)
+
         uptime_s = time.time() - psutil.boot_time()
         d = datetime(1, 1, 1) + timedelta(seconds=uptime_s)
-
         battery = psutil.sensors_battery().percent
-        return align.Align(
-            "[color(8)]"
-            + f"{now}, "
-            + f"up {d.day - 1} days, {d.hour}:{d.minute}, "
-            + f"BAT {round(battery)}%"
-            + "[/]",
-            "center",
+        bat_style = "[color(1) reverse bold]" if battery < 15 else ""
+        bat_style_close = "[/]" if battery < 15 else ""
+        bat_symbol = "🔌" if psutil.sensors_battery().power_plugged else "🔋"
+        right = ", ".join(
+            [
+                f"up {d.day - 1} days, {d.hour}:{d.minute}",
+                f"{bat_symbol} {bat_style}{round(battery)}%{bat_style_close}",
+            ]
         )
+
+        table.add_row(self.left_string, right)
+        return table
 
 
 class CPU(Widget):
@@ -84,6 +105,8 @@ class CPU(Widget):
                 f"{self.num_cores} cores",
             ]
         )
+
+        self.brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
 
         self.collect_data()
         self.set_interval(2.0, self.collect_data)
@@ -151,7 +174,7 @@ class CPU(Widget):
                 title_align="left",
                 subtitle=subtitle,
                 subtitle_align="left",
-                border_style="color(8)",
+                border_style="color(7)",
                 box=box.SQUARE,
             ),
             "right",
@@ -166,7 +189,11 @@ class CPU(Widget):
         # c = Columns(["dasdas", info_box], expand=True)
 
         self.panel = Panel(
-            t, title=f"cpu", title_align="left", border_style="color(4)", box=box.SQUARE
+            t,
+            title=f"cpu - {self.brand_raw}",
+            title_align="left",
+            border_style="color(4)",
+            box=box.SQUARE,
         )
 
         # textual method
@@ -182,10 +209,10 @@ class Mem(Widget):
         self.mem_total_string = sizeof_fmt(self.mem_total_bytes, sep=" ", fmt=".2f")
 
         self.mem_streams = [
-            BrailleStream(40, 3, 0.0, self.mem_total_bytes),
-            BrailleStream(40, 3, 0.0, self.mem_total_bytes),
-            BrailleStream(40, 3, 0.0, self.mem_total_bytes),
-            BrailleStream(40, 3, 0.0, self.mem_total_bytes),
+            BrailleStream(40, 4, 0.0, self.mem_total_bytes),
+            BrailleStream(40, 4, 0.0, self.mem_total_bytes),
+            BrailleStream(40, 4, 0.0, self.mem_total_bytes),
+            BrailleStream(40, 4, 0.0, self.mem_total_bytes),
         ]
 
         self.collect_data()
@@ -207,12 +234,13 @@ class Mem(Widget):
             )
             graphs.append(
                 "\n".join(
-                    [stream.graph[0][: len(val_string)] + val_string] + stream.graph[1:]
+                    [val_string + stream.graph[0][: -len(val_string)]]
+                    + stream.graph[1:]
                 )
             )
 
-        table = Table(box=None, expand=True, padding=0)
-        table.add_row(f"[color(7)]total  {self.mem_total_string}[/]")
+        table = Table(box=None, expand=True, padding=0, show_header=False)
+        table.add_column(justify="left", no_wrap=True)
         table.add_row("[color(2)]" + graphs[0] + "[/]")
         table.add_row("[color(3)]" + graphs[1] + "[/]")
         table.add_row("[color(4)]" + graphs[2] + "[/]")
@@ -220,7 +248,7 @@ class Mem(Widget):
 
         self.panel = Panel(
             table,
-            title=f"mem",
+            title=f"mem - {self.mem_total_string}",
             title_align="left",
             border_style="color(2)",
             box=box.SQUARE,
@@ -276,7 +304,13 @@ class ProcsList(Widget):
         self.refresh()
 
     def render(self) -> Panel:
-        table = Table(show_header=True, header_style="bold", box=None)
+        table = Table(
+            show_header=True,
+            header_style="bold",
+            box=None,
+            padding=0,
+            # border_style=None,
+        )
         table.add_column("pid", min_width=6, no_wrap=True)
         table.add_column("program", max_width=10, style="color(2)", no_wrap=True)
         table.add_column("args", max_width=20, no_wrap=True)
@@ -285,8 +319,6 @@ class ProcsList(Widget):
         table.add_column("memB", style="color(2)", no_wrap=True)
         table.add_column("[u]cpu%[/]", width=5, style="color(2)", no_wrap=True)
 
-        table.padding = 0
-        table.border_style = "none"
         for p in self.processes:
             table.add_row(
                 f"{p.pid:6d}",
