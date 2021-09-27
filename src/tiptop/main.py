@@ -69,7 +69,7 @@ class InfoLine(Widget):
         bat_symbol = "🔌" if psutil.sensors_battery().power_plugged else "🔋"
         right = ", ".join(
             [
-                f"up {d.day - 1} days, {d.hour}:{d.minute}",
+                f"up {d.day - 1}d, {d.hour}:{d.minute:02d}h",
                 f"{bat_symbol} {bat_style}{round(battery)}%{bat_style_close}",
             ]
         )
@@ -138,15 +138,12 @@ class CPU(Widget):
         lines_temp = lines_temp[:-1] + [lines0]
         #
         self.cpu_total_box = align.Align(
-            Panel(
                 "[color(4)]"
                 + "\n".join(lines_cpu)
                 + "[/]\n"
                 + "[color(5)]"
                 + "\n".join(lines_temp)
                 + "[/]"
-            ),
-            "left",
         )
 
         # threads 0 and 4 are in one core, display them next to each other, etc.
@@ -181,7 +178,7 @@ class CPU(Widget):
             vertical="middle",
         )
 
-        t = Table.grid(expand=True)
+        t = Table(expand=True, show_header=False, padding=0)
         t.add_column("full", no_wrap=True)
         t.add_column("box", no_wrap=True)
         # t.add_row(", ".join(["dasdas\n"] * 100), info_box)
@@ -301,14 +298,12 @@ class ProcsList(Widget):
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
 
-        self.refresh()
-
-    def render(self) -> Panel:
         table = Table(
             show_header=True,
             header_style="bold",
             box=None,
             padding=0,
+            expand=True,
             # border_style=None,
         )
         table.add_column("pid", min_width=6, no_wrap=True)
@@ -316,7 +311,7 @@ class ProcsList(Widget):
         table.add_column("args", max_width=20, no_wrap=True)
         table.add_column("#th", width=3, style="color(2)", no_wrap=True)
         table.add_column("user", no_wrap=True)
-        table.add_column("memB", style="color(2)", no_wrap=True)
+        table.add_column("mem", style="color(2)", no_wrap=True)
         table.add_column("[u]cpu%[/]", width=5, style="color(2)", no_wrap=True)
 
         for p in self.processes:
@@ -330,7 +325,7 @@ class ProcsList(Widget):
                 f"{p.cpu_percent:5.1f}",
             )
 
-        return Panel(
+        self.panel = Panel(
             table,
             title="proc",
             title_align="left",
@@ -338,17 +333,47 @@ class ProcsList(Widget):
             box=box.SQUARE,
         )
 
+        self.refresh()
+
+    def render(self) -> Panel:
+        return self.panel
+
 
 class Net(Widget):
-    def render(self) -> Panel:
-        ip = socket.gethostbyname(socket.gethostname())
-        return Panel(
+    def on_mount(self):
+        self.last_sent = None
+        self.last_recv = None
+        self.ip = None
+
+        self.update_ip()
+        self.collect_data()
+
+        self.interval_s = 2.0
+        self.set_interval(self.interval_s, self.collect_data)
+        self.set_interval(60.0, self.update_ip)
+
+    def update_ip(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        self.ip = s.getsockname()[0]
+        s.close()
+
+    def collect_data(self):
+        net = psutil.net_io_counters()
+        self.last_sent = net.bytes_sent
+        self.last_recv = net.bytes_recv
+        self.panel = Panel(
             "",
-            title=f"net - {ip}",
+            title=f"net - {self.ip}",
             title_align="left",
             border_style="color(1)",
             box=box.SQUARE,
         )
+        self.refresh()
+
+    def render(self):
+        return self.panel
+
 
 
 # class TiptopApp(App):
