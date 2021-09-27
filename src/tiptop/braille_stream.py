@@ -51,7 +51,7 @@ class BrailleStream:
         if not self.flipud:
             chars = chars[::-1]
 
-        # roll list
+        # alternate between graphs[0] and graphs[1]
         self._graphs.append(self._graphs.pop(0))
 
         # update stream
