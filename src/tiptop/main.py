@@ -16,10 +16,6 @@ from textual.app import App
 from textual.widget import Widget
 
 
-def argsort(seq):
-    return sorted(range(len(seq)), key=seq.__getitem__)
-
-
 # https://stackoverflow.com/a/1094933/353337
 def sizeof_fmt(num, suffix: str = "iB", sep=" ", fmt=".0f"):
     assert num >= 0
@@ -118,7 +114,7 @@ class CPU(Widget):
         self.cpu_total_stream.add_value(psutil.cpu_percent())
         #
         load_indiv = psutil.cpu_percent(percpu=True)
-        self.cpu_percent_colors = [val_to_color(val, 0.0, 100.0) for val in load_indiv]
+        cpu_percent_colors = [val_to_color(val, 0.0, 100.0) for val in load_indiv]
         for stream, load in zip(self.cpu_percent_streams, load_indiv):
             stream.add_value(load)
 
@@ -139,7 +135,7 @@ class CPU(Widget):
         lines0 = lines_temp[-1][: -len(last_val_string)] + last_val_string
         lines_temp = lines_temp[:-1] + [lines0]
         #
-        self.cpu_total_box = align.Align(
+        cpu_total_graph = align.Align(
             "[color(4)]"
             + "\n".join(lines_cpu)
             + "[/]\n"
@@ -151,7 +147,7 @@ class CPU(Widget):
         # threads 0 and 4 are in one core, display them next to each other, etc.
         cores = [0, 4, 1, 5, 2, 6, 3, 7]
         lines = [
-            f"[{self.cpu_percent_colors[i]}]"
+            f"[{cpu_percent_colors[i]}]"
             + f"{self.cpu_percent_streams[i].graph[0]} "
             + f"{round(self.cpu_percent_streams[i].last_value):3d}%[/]"
             for i in cores
@@ -181,10 +177,10 @@ class CPU(Widget):
         )
 
         t = Table(expand=True, show_header=False, padding=0)
-        t.add_column("full", no_wrap=True)
+        t.add_column("graph", no_wrap=True, justify="right")
         t.add_column("box", no_wrap=True)
         # t.add_row(", ".join(["dasdas\n"] * 100), info_box)
-        t.add_row(self.cpu_total_box, info_box)
+        t.add_row(cpu_total_graph, info_box)
         # c = Columns(["dasdas", info_box], expand=True)
 
         self.panel = Panel(
@@ -298,7 +294,7 @@ class ProcsList(Widget):
         for p in processes[:30]:
             table.add_row(
                 f"{p.info['pid']:6d}",
-                p.info['name'],
+                p.info["name"],
                 " ".join(p.info["cmdline"][1:]),
                 f"{p.info['num_threads']:3d}",
                 p.info["username"],
@@ -322,8 +318,19 @@ class ProcsList(Widget):
 
 class Net(Widget):
     def on_mount(self):
+        # try to find non-lo interface that is up
+        self.interface = None
+        stats = psutil.net_if_stats()
+        for string, stats in stats.items():
+            if string != "lo" and stats.isup:
+                self.interface = string
+                break
+
+        if self.interface is None:
+            assert "lo" in stats
+            self.interface = "lo"
+
         self.last_net = None
-        self.ip = None
         self.max_recv_bytes_s = 0
         self.max_recv_bytes_s_str = ""
         self.max_sent_bytes_s = 0
@@ -337,7 +344,6 @@ class Net(Widget):
 
         self.interval_s = 2.0
         self.set_interval(self.interval_s, self.collect_data)
-        self.set_interval(60.0, self.update_ip)
 
     def update_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -346,7 +352,14 @@ class Net(Widget):
         s.close()
 
     def collect_data(self):
-        net = psutil.net_io_counters()
+        self.ipv4 = None
+        for addr in psutil.net_if_addrs()[self.interface]:
+            # ipv4?
+            if addr.family == socket.AF_INET:
+                self.ipv4 = addr.address
+                break
+
+        net = psutil.net_io_counters(pernic=True)[self.interface]
         if self.last_net is None:
             recv_bytes_s_string = ""
             sent_bytes_s_string = ""
@@ -381,7 +394,6 @@ class Net(Widget):
             "\n".join(down_box_lines),
             title="▼ down",
             title_align="left",
-            subtitle_align="left",
             style="color(2)",
             width=20,
             box=box.SQUARE,
@@ -395,7 +407,6 @@ class Net(Widget):
             "\n".join(up_box_lines),
             title="▲ up",
             title_align="left",
-            subtitle_align="left",
             style="color(4)",
             width=20,
             box=box.SQUARE,
@@ -410,7 +421,7 @@ class Net(Widget):
 
         self.content = Panel(
             t,
-            title=f"net - {self.ip}",
+            title=f"net - {self.interface}",
             border_style="color(1)",
             title_align="left",
             box=box.SQUARE,
