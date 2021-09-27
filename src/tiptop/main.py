@@ -19,14 +19,16 @@ def argsort(seq):
 
 
 # https://stackoverflow.com/a/1094933/353337
-def sizeof_fmt(num):
+def sizeof_fmt(num, suffix: str = "iB", sep="", fmt=".0f"):
     assert num >= 0
     for unit in ["B", "k", "M", "G", "T", "P", "E", "Z"]:
         # actually 1024, but be economical with the return string size:
         if num < 1000:
-            return f"{round(num):3d}{unit}"
+            string = f"{{:{fmt}}}".format(num)
+            return f"{string}{sep}{unit}{suffix}"
         num /= 1024
-    return f"{round(num):3d}Y"
+    string = f"{{:{fmt}}}".format(num)
+    return f"{string}{sep}Y{suffix}"
 
 
 def val_to_color(val: float, minval: float, maxval: float) -> str:
@@ -36,6 +38,9 @@ def val_to_color(val: float, minval: float, maxval: float) -> str:
 
 
 class InfoLine(Widget):
+    def on_mount(self):
+        self.set_interval(2.0, self.refresh)
+
     def render(self):
         now = datetime.now().strftime("%c")
         uptime_s = time.time() - psutil.boot_time()
@@ -50,9 +55,6 @@ class InfoLine(Widget):
             + "[/]",
             "center",
         )
-
-    def on_mount(self):
-        self.set_interval(2.0, self.refresh)
 
 
 class CPU(Widget):
@@ -102,21 +104,17 @@ class CPU(Widget):
         for stream, temp in zip(self.core_temp_streams, temps[1:]):
             stream.add_value(temp.current)
 
-        # textual method
-        self.refresh()
-
-    def render(self):
         lines_cpu = self.cpu_total_stream.graph
         last_val_string = f"{self.cpu_total_stream.last_value:5.1f}%"
         lines0 = lines_cpu[0][: -len(last_val_string)] + last_val_string
-        lines_cpu = [lines0] + lines_cpu[1:]
+        self.lines_cpu = [lines0] + lines_cpu[1:]
         #
         lines_temp = self.temp_total_stream.graph
         last_val_string = f"{round(self.temp_total_stream.last_value):3d}°C"
         lines0 = lines_temp[-1][: -len(last_val_string)] + last_val_string
         lines_temp = lines_temp[:-1] + [lines0]
-
-        cpu_total_box = align.Align(
+        #
+        self.cpu_total_box = align.Align(
             Panel(
                 "[color(4)]"
                 + "\n".join(lines_cpu)
@@ -127,12 +125,6 @@ class CPU(Widget):
             ),
             "left",
         )
-
-        # percent = round(self.cpu_percent_data[-1])
-        # lines += [
-        #     f"[b]CPU[/] [{self.color_total}]{self.cpu_percent_graph} {percent:3d}%[/]  "
-        #     f"[color(5)]{self.total_temp_graph} {int(self.temp_total[-1])}°C[/]"
-        # ]
 
         # threads 0 and 4 are in one core, display them next to each other, etc.
         cores = [0, 4, 1, 5, 2, 6, 3, 7]
@@ -170,37 +162,73 @@ class CPU(Widget):
         t.add_column("full", no_wrap=True)
         t.add_column("box", no_wrap=True)
         # t.add_row(", ".join(["dasdas\n"] * 100), info_box)
-        t.add_row(cpu_total_box, info_box)
+        t.add_row(self.cpu_total_box, info_box)
         # c = Columns(["dasdas", info_box], expand=True)
 
-        return Panel(
+        self.panel = Panel(
             t, title=f"cpu", title_align="left", border_style="color(4)", box=box.SQUARE
         )
+
+        # textual method
+        self.refresh()
+
+    def render(self):
+        return self.panel
 
 
 class Mem(Widget):
     def on_mount(self):
-        self.mem_total_str = sizeof_fmt(psutil.virtual_memory().total)
+        self.mem_total_bytes = psutil.virtual_memory().total
+        self.mem_total_string = sizeof_fmt(self.mem_total_bytes, sep=" ", fmt=".2f")
 
-        self.free_mem_stream = BrailleStream(20, 4, 0.0, self.mem_total_str)
+        self.mem_streams = [
+            BrailleStream(40, 3, 0.0, self.mem_total_bytes),
+            BrailleStream(40, 3, 0.0, self.mem_total_bytes),
+            BrailleStream(40, 3, 0.0, self.mem_total_bytes),
+            BrailleStream(40, 3, 0.0, self.mem_total_bytes),
+        ]
 
         self.collect_data()
         self.set_interval(2.0, self.collect_data)
 
     def collect_data(self):
-        self.free_mem_stream.add_value(psutil.virtual_memory().available)
-        self.refresh()
+        mem = psutil.virtual_memory()
+        names = ["used  ", "avail ", "cached", "free  "]
+        values = [mem.used, mem.available, mem.cached, mem.free]
+        graphs = []
+        for name, stream, val in zip(names, self.mem_streams, values):
+            stream.add_value(val)
+            val_string = " ".join(
+                [
+                    name,
+                    sizeof_fmt(val, sep=" ", fmt=".2f"),
+                    f"({val / self.mem_total_bytes * 100:.0f}%)",
+                ]
+            )
+            graphs.append(
+                "\n".join(
+                    [stream.graph[0][: len(val_string)] + val_string] + stream.graph[1:]
+                )
+            )
 
-    def render(self) -> Panel:
-        p = Panel("[color(2)]" + "\n".join(self.free_mem_stream.graph) + "[/]")
-        return Panel(
-            # f"{self.mem_total_str}",
-            p,
-            title="mem",
+        table = Table(box=None, expand=True, padding=0)
+        table.add_row(f"[color(7)]total  {self.mem_total_string}[/]")
+        table.add_row("[color(2)]" + graphs[0] + "[/]")
+        table.add_row("[color(3)]" + graphs[1] + "[/]")
+        table.add_row("[color(4)]" + graphs[2] + "[/]")
+        table.add_row("[color(5)]" + graphs[3] + "[/]")
+
+        self.panel = Panel(
+            table,
+            title=f"mem",
             title_align="left",
             border_style="color(2)",
             box=box.SQUARE,
         )
+        self.refresh()
+
+    def render(self) -> Panel:
+        return self.panel
 
 
 class ProcInfo(NamedTuple):
@@ -266,7 +294,7 @@ class ProcsList(Widget):
                 " ".join(p.cmdline[1:]),
                 f"{p.num_threads:3d}",
                 p.username,
-                sizeof_fmt(p.memory),
+                sizeof_fmt(p.memory, suffix=""),
                 f"{p.cpu_percent:5.1f}",
             )
 
@@ -316,18 +344,25 @@ class TiptopApp(App):
         grid.add_column(fraction=1, name="left")
         grid.add_column(fraction=1, name="right")
 
+        grid.add_row(size=1, name="topline")
         grid.add_row(fraction=1, name="top")
         grid.add_row(fraction=1, name="center")
         grid.add_row(fraction=1, name="bottom")
 
         grid.add_areas(
+            area0="left-start|right-end,topline",
             area1="left-start|right-end,top",
             area2="left,center",
             area3="left,bottom",
             area4="right,center-start|bottom-end",
         )
 
-        grid.place(area1=CPU(), area2=Mem(), area3=Net(), area4=ProcsList())
+        grid.place(
+            area0=InfoLine(), area1=CPU(), area2=Mem(), area3=Net(), area4=ProcsList()
+        )
+
+    async def on_load(self, _):
+        await self.bind("q", "quit", "quit")
 
 
 TiptopApp.run()
