@@ -22,13 +22,16 @@ def argsort(seq):
 
 
 # https://stackoverflow.com/a/1094933/353337
-def sizeof_fmt(num, suffix: str = "iB", sep="", fmt=".0f"):
+def sizeof_fmt(num, suffix: str = "iB", sep=" ", fmt=".0f"):
     assert num >= 0
-    for unit in ["B", "k", "M", "G", "T", "P", "E", "Z"]:
+    for unit in ["B", "K", "M", "G", "T", "P", "E", "Z"]:
         # actually 1024, but be economical with the return string size:
+        if unit != "B":
+            unit += suffix
+
         if num < 1000:
             string = f"{{:{fmt}}}".format(num)
-            return f"{string}{sep}{unit}{suffix}"
+            return f"{string}{sep}{unit}"
         num /= 1024
     string = f"{{:{fmt}}}".format(num)
     return f"{string}{sep}Y{suffix}"
@@ -138,12 +141,12 @@ class CPU(Widget):
         lines_temp = lines_temp[:-1] + [lines0]
         #
         self.cpu_total_box = align.Align(
-                "[color(4)]"
-                + "\n".join(lines_cpu)
-                + "[/]\n"
-                + "[color(5)]"
-                + "\n".join(lines_temp)
-                + "[/]"
+            "[color(4)]"
+            + "\n".join(lines_cpu)
+            + "[/]\n"
+            + "[color(5)]"
+            + "\n".join(lines_temp)
+            + "[/]"
         )
 
         # threads 0 and 4 are in one core, display them next to each other, etc.
@@ -203,7 +206,7 @@ class CPU(Widget):
 class Mem(Widget):
     def on_mount(self):
         self.mem_total_bytes = psutil.virtual_memory().total
-        self.mem_total_string = sizeof_fmt(self.mem_total_bytes, sep=" ", fmt=".2f")
+        self.mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
 
         self.mem_streams = [
             BrailleStream(40, 4, 0.0, self.mem_total_bytes),
@@ -225,7 +228,7 @@ class Mem(Widget):
             val_string = " ".join(
                 [
                     name,
-                    sizeof_fmt(val, sep=" ", fmt=".2f"),
+                    sizeof_fmt(val, fmt=".2f"),
                     f"({val / self.mem_total_bytes * 100:.0f}%)",
                 ]
             )
@@ -321,7 +324,7 @@ class ProcsList(Widget):
                 " ".join(p.cmdline[1:]),
                 f"{p.num_threads:3d}",
                 p.username,
-                sizeof_fmt(p.memory, suffix=""),
+                sizeof_fmt(p.memory, suffix="", sep=""),
                 f"{p.cpu_percent:5.1f}",
             )
 
@@ -341,9 +344,15 @@ class ProcsList(Widget):
 
 class Net(Widget):
     def on_mount(self):
-        self.last_sent = None
-        self.last_recv = None
+        self.last_net = None
         self.ip = None
+        self.max_recv_bytes_s = 0
+        self.max_recv_bytes_s_str = ""
+        self.max_sent_bytes_s = 0
+        self.max_sent_bytes_s_str = ""
+
+        self.recv_stream = BrailleStream(20, 4, 0.0, 1.0e6)
+        self.sent_stream = BrailleStream(20, 4, 0.0, 1.0e6, flipud=True)
 
         self.update_ip()
         self.collect_data()
@@ -360,20 +369,79 @@ class Net(Widget):
 
     def collect_data(self):
         net = psutil.net_io_counters()
-        self.last_sent = net.bytes_sent
-        self.last_recv = net.bytes_recv
-        self.panel = Panel(
-            "",
-            title=f"net - {self.ip}",
+        if self.last_net is None:
+            recv_bytes_s_string = ""
+            sent_bytes_s_string = ""
+        else:
+            recv_bytes_s = (net.bytes_recv - self.last_net.bytes_recv) / self.interval_s
+            recv_bytes_s_string = sizeof_fmt(recv_bytes_s, fmt=".1f") + "/s"
+            sent_bytes_s = (net.bytes_sent - self.last_net.bytes_sent) / self.interval_s
+            sent_bytes_s_string = sizeof_fmt(sent_bytes_s, fmt=".1f") + "/s"
+
+            if recv_bytes_s > self.max_recv_bytes_s:
+                self.max_recv_bytes_s = recv_bytes_s
+                self.max_recv_bytes_s_str = sizeof_fmt(recv_bytes_s, fmt=".1f") + "/s"
+
+            if sent_bytes_s > self.max_sent_bytes_s:
+                self.max_sent_bytes_s = sent_bytes_s
+                self.max_sent_bytes_s_str = sizeof_fmt(sent_bytes_s, fmt=".1f") + "/s"
+
+            self.recv_stream.add_value(recv_bytes_s)
+            self.sent_stream.add_value(sent_bytes_s)
+
+        self.last_net = net
+
+        total_recv_string = sizeof_fmt(net.bytes_recv, sep=" ", fmt=".1f")
+        total_sent_string = sizeof_fmt(net.bytes_sent, sep=" ", fmt=".1f")
+
+        down_box_lines = [
+            f"{recv_bytes_s_string}",
+            f"max   {self.max_recv_bytes_s_str}",
+            f"total {total_recv_string}",
+        ]
+        down_box = Panel(
+            "\n".join(down_box_lines),
+            title="▼ down",
             title_align="left",
-            border_style="color(1)",
+            subtitle_align="left",
+            style="color(2)",
+            width=20,
             box=box.SQUARE,
         )
+        up_box_lines = [
+            f"{sent_bytes_s_string}",
+            f"max   {self.max_sent_bytes_s_str}",
+            f"total {total_sent_string}",
+        ]
+        up_box = Panel(
+            "\n".join(up_box_lines),
+            title="▲ up",
+            title_align="left",
+            subtitle_align="left",
+            style="color(4)",
+            width=20,
+            box=box.SQUARE,
+        )
+
+        t = Table(expand=True, show_header=False, padding=0)
+        t.add_column("graph", no_wrap=True, justify="right")
+        t.add_column("box", no_wrap=True, width=down_box.width)
+
+        t.add_row("[color(2)]" + "\n".join(self.recv_stream.graph) + "[/]", down_box)
+        t.add_row("[color(4)]" + "\n".join(self.sent_stream.graph) + "[/]", up_box)
+
+        self.content = Panel(
+            t,
+            title=f"net - {self.ip}",
+            border_style="color(1)",
+            title_align="left",
+            box=box.SQUARE,
+        )
+
         self.refresh()
 
     def render(self):
-        return self.panel
-
+        return self.content
 
 
 # class TiptopApp(App):
