@@ -5,8 +5,13 @@ from rich.panel import Panel
 from rich.table import Table
 from textual.widget import Widget
 
-# TODO relative imports
 from .braille_stream import BrailleStream
+
+
+def val_to_color(val: float, minval: float, maxval: float) -> str:
+    t = (val - minval) / (maxval - minval)
+    k = round(t * 3)
+    return {0: "color(4)", 1: "color(6)", 2: "color(6)", 3: "color(2)"}[k]
 
 
 class CPU(Widget):

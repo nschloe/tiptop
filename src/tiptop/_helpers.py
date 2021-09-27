@@ -12,9 +12,3 @@ def sizeof_fmt(num, suffix: str = "iB", sep=" ", fmt=".0f"):
         num /= 1024
     string = f"{{:{fmt}}}".format(num)
     return f"{string}{sep}Y{suffix}"
-
-
-def val_to_color(val: float, minval: float, maxval: float) -> str:
-    t = (val - minval) / (maxval - minval)
-    k = round(t * 3)
-    return {0: "color(4)", 1: "color(6)", 2: "color(6)", 3: "color(2)"}[k]

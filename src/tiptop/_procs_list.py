@@ -4,6 +4,8 @@ from rich.panel import Panel
 from rich.table import Table
 from textual.widget import Widget
 
+from ._helpers import sizeof_fmt
+
 
 class ProcsList(Widget):
     def on_mount(self):
