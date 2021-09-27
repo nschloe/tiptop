@@ -2,7 +2,6 @@ import platform
 import socket
 import time
 from datetime import datetime, timedelta
-from typing import NamedTuple
 
 import cpuinfo
 import distro
@@ -259,47 +258,26 @@ class Mem(Widget):
         return self.panel
 
 
-class ProcInfo(NamedTuple):
-    pid: int
-    name: str
-    cmdline: str
-    cpu_percent: float
-    num_threads: int
-    username: str
-    memory: int
-
-
 class ProcsList(Widget):
     def on_mount(self):
         self.collect_data()
         self.set_interval(6.0, self.collect_data)
 
     def collect_data(self):
-        processes = list(psutil.process_iter())
-        cpu_percent = [p.cpu_percent() for p in processes]
-        # sort by cpu_percent
-        idx = argsort(cpu_percent)[::-1]
-
-        # Pick top 20 and cache all values. The process might not be there anymore if we
-        # try to retrieve the details at a later time.
-        self.processes = []
-        for k in idx[:30]:
-            p = processes[k]
-            try:
-                with p.oneshot():
-                    self.processes.append(
-                        ProcInfo(
-                            p.pid,
-                            p.name(),
-                            p.cmdline(),
-                            cpu_percent[k],
-                            p.num_threads(),
-                            p.username(),
-                            p.memory_info().rss,
-                        )
-                    )
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
+        attrs = [
+            "pid",
+            "name",
+            "username",
+            "cmdline",
+            "cpu_percent",
+            "num_threads",
+            "memory_info",
+        ]
+        processes = sorted(
+            psutil.process_iter(attrs),
+            key=lambda item: item.info["cpu_percent"],
+            reverse=True,
+        )
 
         table = Table(
             show_header=True,
@@ -317,15 +295,15 @@ class ProcsList(Widget):
         table.add_column("mem", style="color(2)", no_wrap=True)
         table.add_column("[u]cpu%[/]", width=5, style="color(2)", no_wrap=True)
 
-        for p in self.processes:
+        for p in processes[:30]:
             table.add_row(
-                f"{p.pid:6d}",
-                p.name,
-                " ".join(p.cmdline[1:]),
-                f"{p.num_threads:3d}",
-                p.username,
-                sizeof_fmt(p.memory, suffix="", sep=""),
-                f"{p.cpu_percent:5.1f}",
+                f"{p.info['pid']:6d}",
+                p.info['name'],
+                " ".join(p.info["cmdline"][1:]),
+                f"{p.info['num_threads']:3d}",
+                p.info["username"],
+                sizeof_fmt(p.info["memory_info"].rss, suffix="", sep=""),
+                f"{p.info['cpu_percent']:5.1f}",
             )
 
         self.panel = Panel(
@@ -351,8 +329,8 @@ class Net(Widget):
         self.max_sent_bytes_s = 0
         self.max_sent_bytes_s_str = ""
 
-        self.recv_stream = BrailleStream(20, 4, 0.0, 1.0e6)
-        self.sent_stream = BrailleStream(20, 4, 0.0, 1.0e6, flipud=True)
+        self.recv_stream = BrailleStream(20, 5, 0.0, 1.0e6)
+        self.sent_stream = BrailleStream(20, 5, 0.0, 1.0e6, flipud=True)
 
         self.update_ip()
         self.collect_data()
