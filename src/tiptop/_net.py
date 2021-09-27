@@ -107,7 +107,7 @@ class Net(Widget):
         )
 
         t = Table(expand=True, show_header=False, padding=0)
-        t.add_column("graph", no_wrap=True, justify="right")
+        t.add_column("graph", no_wrap=True)
         t.add_column("box", no_wrap=True, width=down_box.width)
 
         t.add_row("[color(2)]" + "\n".join(self.recv_stream.graph) + "[/]", down_box)
