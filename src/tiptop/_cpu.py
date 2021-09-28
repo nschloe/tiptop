@@ -14,12 +14,31 @@ def val_to_color(val: float, minval: float, maxval: float) -> str:
     return {0: "color(4)", 1: "color(6)", 2: "color(6)", 3: "color(2)"}[k]
 
 
+# https://stackoverflow.com/a/312464/353337
+def chunks(lst, n):
+   for i in range(0, len(lst), n):
+       yield lst[i:i + n]
+
+
+# https://stackoverflow.com/a/6473724/353337
+def transpose(lst):
+    return list(map(list, zip(*lst)))
+
+
+def flatten(lst):
+    return [item for sublist in lst for item in sublist]
+
+
 class CPU(Widget):
     def on_mount(self):
         # self.max_graph_width = 200
 
         num_cores = psutil.cpu_count(logical=False)
         num_threads = psutil.cpu_count(logical=True)
+
+        # 8 threads, 4 cores -> [0, 4, 1, 5, 2, 6, 3, 7]
+        assert num_threads % num_cores == 0
+        self.core_order = flatten(transpose(list(chunks(range(num_threads), num_cores))))
 
         self.cpu_total_stream = BrailleStream(50, 7, 0.0, 100.0)
 
@@ -29,12 +48,16 @@ class CPU(Widget):
             # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
         ]
 
-        temp_low = 20.0
-        temp_high = psutil.sensors_temperatures()["coretemp"][0].high
-        self.temp_total_stream = BrailleStream(50, 7, temp_low, temp_high, flipud=True)
-        self.core_temp_streams = [
-            BrailleStream(5, 1, temp_low, temp_high) for _ in range(num_cores)
-        ]
+        temps = psutil.sensors_temperatures()
+        self.has_temps = False
+        if "coretemp" in temps:
+            self.has_temps = True
+            temp_low = 20.0
+            temp_high = temps["coretemp"][0].high
+            self.temp_total_stream = BrailleStream(50, 7, temp_low, temp_high, flipud=True)
+            self.core_temp_streams = [
+                BrailleStream(5, 1, temp_low, temp_high) for _ in range(num_cores)
+            ]
 
         self.box_title = ", ".join(
             [
@@ -57,44 +80,40 @@ class CPU(Widget):
             stream.add_value(load)
 
         # CPU temperatures
-        temps = psutil.sensors_temperatures()["coretemp"]
-        self.temp_total_stream.add_value(temps[0].current)
-        #
-        for stream, temp in zip(self.core_temp_streams, temps[1:]):
-            stream.add_value(temp.current)
+        if self.has_temps:
+            coretemps = psutil.sensors_temperatures()["coretemp"]
+            self.temp_total_stream.add_value(coretemps[0].current)
+            #
+            for stream, temp in zip(self.core_temp_streams, coretemps[1:]):
+                stream.add_value(temp.current)
 
         lines_cpu = self.cpu_total_stream.graph
         last_val_string = f"{self.cpu_total_stream.last_value:5.1f}%"
         lines0 = lines_cpu[0][: -len(last_val_string)] + last_val_string
         lines_cpu = [lines0] + lines_cpu[1:]
         #
-        lines_temp = self.temp_total_stream.graph
-        last_val_string = f"{round(self.temp_total_stream.last_value):3d}°C"
-        lines0 = lines_temp[-1][: -len(last_val_string)] + last_val_string
-        lines_temp = lines_temp[:-1] + [lines0]
-        #
-        cpu_total_graph = (
-            "[color(4)]"
-            + "\n".join(lines_cpu)
-            + "[/]\n"
-            + "[color(5)]"
-            + "\n".join(lines_temp)
-            + "[/]"
-        )
+        cpu_total_graph = "[color(4)]" + "\n".join(lines_cpu) + "[/]\n"
 
-        # threads 0 and 4 are in one core, display them next to each other, etc.
-        cores = [0, 4, 1, 5, 2, 6, 3, 7]
+        #
+        if self.has_temps:
+            lines_temp = self.temp_total_stream.graph
+            last_val_string = f"{round(self.temp_total_stream.last_value):3d}°C"
+            lines0 = lines_temp[-1][: -len(last_val_string)] + last_val_string
+            lines_temp = lines_temp[:-1] + [lines0]
+            cpu_total_graph += "[color(5)]" + "\n".join(lines_temp) + "[/]"
+
         lines = [
             f"[{cpu_percent_colors[i]}]"
             + f"{self.cpu_percent_streams[i].graph[0]} "
             + f"{round(self.cpu_percent_streams[i].last_value):3d}%[/]"
-            for i in cores
+            for i in self.core_order
         ]
-        # add temperature in every other line
-        for k, stream in enumerate(self.core_temp_streams):
-            lines[
-                2 * k
-            ] += f" [color(5)]{stream.graph[0]} {round(stream.last_value)}°C[/]"
+        if self.has_temps:
+            # add temperature in every other line
+            for k, stream in enumerate(self.core_temp_streams):
+                lines[
+                    2 * k
+                ] += f" [color(5)]{stream.graph[0]} {round(stream.last_value)}°C[/]"
 
         # load_avg = os.getloadavg()
         # subtitle = f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
