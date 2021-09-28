@@ -29,8 +29,9 @@ def run():
         async def on_mount(self) -> None:
             grid = await self.view.dock_grid(edge="left")
 
-            grid.add_column(fraction=1, name="left")
-            grid.add_column(fraction=1, name="right")
+            # 8/13: approx golden ratio :)
+            grid.add_column(fraction=8, name="left")
+            grid.add_column(fraction=13, name="right")
 
             grid.add_row(size=1, name="topline")
             grid.add_row(fraction=1, name="top")
