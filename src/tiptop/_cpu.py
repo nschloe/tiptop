@@ -16,8 +16,8 @@ def val_to_color(val: float, minval: float, maxval: float) -> str:
 
 # https://stackoverflow.com/a/312464/353337
 def chunks(lst, n):
-   for i in range(0, len(lst), n):
-       yield lst[i:i + n]
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
 
 
 # https://stackoverflow.com/a/6473724/353337
@@ -38,7 +38,9 @@ class CPU(Widget):
 
         # 8 threads, 4 cores -> [0, 4, 1, 5, 2, 6, 3, 7]
         assert num_threads % num_cores == 0
-        self.core_order = flatten(transpose(list(chunks(range(num_threads), num_cores))))
+        self.core_order = flatten(
+            transpose(list(chunks(range(num_threads), num_cores)))
+        )
 
         self.cpu_total_stream = BrailleStream(50, 7, 0.0, 100.0)
 
@@ -54,7 +56,9 @@ class CPU(Widget):
             self.has_temps = True
             temp_low = 20.0
             temp_high = temps["coretemp"][0].high
-            self.temp_total_stream = BrailleStream(50, 7, temp_low, temp_high, flipud=True)
+            self.temp_total_stream = BrailleStream(
+                50, 7, temp_low, temp_high, flipud=True
+            )
             self.core_temp_streams = [
                 BrailleStream(5, 1, temp_low, temp_high) for _ in range(num_cores)
             ]

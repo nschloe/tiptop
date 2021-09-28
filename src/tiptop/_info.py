@@ -38,7 +38,9 @@ class InfoLine(Widget):
             bat_style = "[color(1) reverse bold]" if battery.percent < 15 else ""
             bat_style_close = "[/]" if battery.percent < 15 else ""
             bat_symbol = "🔌" if battery.power_plugged else "🔋"
-            right.append(f"{bat_style}{bat_symbol} {round(battery.percent)}%{bat_style_close}")
+            right.append(
+                f"{bat_style}{bat_symbol} {round(battery.percent)}%{bat_style_close}"
+            )
 
         table.add_row(self.left_string, ", ".join(right))
         return table
