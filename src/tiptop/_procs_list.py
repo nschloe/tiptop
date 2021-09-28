@@ -42,7 +42,7 @@ class ProcsList(Widget):
         table.add_column("#th", width=3, style="color(2)", no_wrap=True)
         table.add_column("user", no_wrap=True)
         table.add_column("mem", style="color(2)", no_wrap=True)
-        table.add_column("[u]cpu%[/]", width=5, style="color(2)", no_wrap=True)
+        table.add_column("[u]cpu%[/]", width=5, no_wrap=True)
 
         for p in processes[: self.max_num_procs]:
             table.add_row(
