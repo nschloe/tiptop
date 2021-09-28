@@ -2,6 +2,7 @@ import socket
 
 import psutil
 from rich import box
+from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
 from textual.widget import Widget
@@ -46,11 +47,18 @@ class Net(Widget):
         s.close()
 
     def collect_data(self):
+        addrs = psutil.net_if_addrs()[self.interface]
         self.ipv4 = None
-        for addr in psutil.net_if_addrs()[self.interface]:
+        for addr in addrs:
             # ipv4?
             if addr.family == socket.AF_INET:
                 self.ipv4 = addr.address
+                break
+        self.ipv6 = None
+        for addr in addrs:
+            # ipv4?
+            if addr.family == socket.AF_INET6:
+                self.ipv6 = addr.address
                 break
 
         net = psutil.net_io_counters(pernic=True)[self.interface]
@@ -113,8 +121,10 @@ class Net(Widget):
         t.add_row("[color(2)]" + "\n".join(self.recv_stream.graph) + "[/]", down_box)
         t.add_row("[color(4)]" + "\n".join(self.sent_stream.graph) + "[/]", up_box)
 
+        g = Group(t, f"IPv4: {self.ipv4}", f"IPv6: {self.ipv6}")
+
         self.content = Panel(
-            t,
+            g,
             title=f"net - {self.interface}",
             border_style="color(1)",
             title_align="left",
