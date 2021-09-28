@@ -24,7 +24,6 @@ def run():
     #         await self.bind("p", "view.toggle('proc')", "Toggle proc")
     #         await self.bind("q", "quit", "quit")
 
-
     # with a grid
     class TiptopApp(App):
         async def on_mount(self) -> None:
@@ -47,11 +46,14 @@ def run():
             )
 
             grid.place(
-                area0=InfoLine(), area1=CPU(), area2=Mem(), area3=Net(), area4=ProcsList()
+                area0=InfoLine(),
+                area1=CPU(),
+                area2=Mem(),
+                area3=Net(),
+                area4=ProcsList(),
             )
 
         async def on_load(self, _):
             await self.bind("q", "quit", "quit")
-
 
     TiptopApp.run()

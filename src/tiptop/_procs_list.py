@@ -22,6 +22,7 @@ class ProcsList(Widget):
             "cpu_percent",
             "num_threads",
             "memory_info",
+            "status",
         ]
         processes = sorted(
             psutil.process_iter(attrs),
@@ -39,7 +40,7 @@ class ProcsList(Widget):
         table.add_column("pid", min_width=6, no_wrap=True)
         table.add_column("program", max_width=10, style="color(2)", no_wrap=True)
         table.add_column("args", max_width=20, no_wrap=True)
-        table.add_column("#th", width=3, style="color(2)", no_wrap=True)
+        table.add_column("thr", width=3, style="color(2)", no_wrap=True)
         table.add_column("user", no_wrap=True)
         table.add_column("mem", style="color(2)", no_wrap=True)
         table.add_column("[u]cpu%[/]", width=5, no_wrap=True)
@@ -55,9 +56,12 @@ class ProcsList(Widget):
                 f"{p.info['cpu_percent']:5.1f}",
             )
 
+        total_num_threads = sum(p.info["num_threads"] for p in processes)
+        num_sleep = sum(p.info["status"] == "sleeping" for p in processes)
+
         self.panel = Panel(
             table,
-            title="proc",
+            title=f"proc - {len(processes)} ({total_num_threads} thr), {num_sleep} slp",
             title_align="left",
             border_style="color(6)",
             box=box.SQUARE,
