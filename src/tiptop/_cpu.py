@@ -61,8 +61,8 @@ class CPU(Widget):
 
         self.box_title = ", ".join(
             [
-                f"{num_threads} threads",
-                f"{num_cores} cores",
+                f"{num_threads} thread" + "s" if num_threads > 1 else "",
+                f"{num_cores} core" + "s" if num_cores > 1 else "",
             ]
         )
 
