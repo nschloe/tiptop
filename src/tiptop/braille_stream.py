@@ -38,7 +38,14 @@ class BrailleStream:
         self.flipud = flipud
 
     def add_value(self, value: float):
-        k = ceil((value - self.minval) / (self.maxval - self.minval) * 4 * self.height)
+        if value < self.minval:
+            k = 0
+        elif value > self.maxval:
+            k = 4 * self.height
+        else:
+            k = ceil(
+                (value - self.minval) / (self.maxval - self.minval) * 4 * self.height
+            )
 
         blocks = [4] * (k // 4)
         if k % 4 > 0:

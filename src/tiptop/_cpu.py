@@ -21,7 +21,7 @@ class CPU(Widget):
         num_cores = psutil.cpu_count(logical=False)
         num_threads = psutil.cpu_count(logical=True)
 
-        self.cpu_total_stream = BrailleStream(50, 6, 0.0, 100.0)
+        self.cpu_total_stream = BrailleStream(50, 7, 0.0, 100.0)
 
         self.cpu_percent_streams = [
             BrailleStream(10, 1, 0.0, 100.0)
@@ -31,7 +31,7 @@ class CPU(Widget):
 
         temp_low = 20.0
         temp_high = psutil.sensors_temperatures()["coretemp"][0].high
-        self.temp_total_stream = BrailleStream(50, 6, temp_low, temp_high, flipud=True)
+        self.temp_total_stream = BrailleStream(50, 7, temp_low, temp_high, flipud=True)
         self.core_temp_streams = [
             BrailleStream(5, 1, temp_low, temp_high) for _ in range(num_cores)
         ]
@@ -66,7 +66,7 @@ class CPU(Widget):
         lines_cpu = self.cpu_total_stream.graph
         last_val_string = f"{self.cpu_total_stream.last_value:5.1f}%"
         lines0 = lines_cpu[0][: -len(last_val_string)] + last_val_string
-        self.lines_cpu = [lines0] + lines_cpu[1:]
+        lines_cpu = [lines0] + lines_cpu[1:]
         #
         lines_temp = self.temp_total_stream.graph
         last_val_string = f"{round(self.temp_total_stream.last_value):3d}°C"
