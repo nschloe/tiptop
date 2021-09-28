@@ -31,16 +31,14 @@ class InfoLine(Widget):
 
         uptime_s = time.time() - psutil.boot_time()
         d = datetime(1, 1, 1) + timedelta(seconds=uptime_s)
-        battery = psutil.sensors_battery().percent
-        bat_style = "[color(1) reverse bold]" if battery < 15 else ""
-        bat_style_close = "[/]" if battery < 15 else ""
-        bat_symbol = "🔌" if psutil.sensors_battery().power_plugged else "🔋"
-        right = ", ".join(
-            [
-                f"up {d.day - 1}d, {d.hour}:{d.minute:02d}h",
-                f"{bat_style}{bat_symbol} {round(battery)}%{bat_style_close}",
-            ]
-        )
+        right = [f"up {d.day - 1}d, {d.hour}:{d.minute:02d}h"]
 
-        table.add_row(self.left_string, right)
+        battery = psutil.sensors_battery()
+        if battery is not None:
+            bat_style = "[color(1) reverse bold]" if battery.percent < 15 else ""
+            bat_style_close = "[/]" if battery.percent < 15 else ""
+            bat_symbol = "🔌" if battery.power_plugged else "🔋"
+            right.append(f"{bat_style}{bat_symbol} {round(battery.percent)}%{bat_style_close}")
+
+        table.add_row(self.left_string, ", ".join(right))
         return table
