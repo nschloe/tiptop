@@ -136,7 +136,8 @@ class CPU(Widget):
         )
 
         t = Table(expand=True, show_header=False, padding=0)
-        t.add_column("graph", no_wrap=True)
+        # Add ratio 1 to expand that column as much as possible
+        t.add_column("graph", no_wrap=True, ratio=1)
         t.add_column("box", no_wrap=True, justify="left")
         t.add_row(cpu_total_graph, info_box)
 
