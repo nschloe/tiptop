@@ -1,6 +1,7 @@
 import platform
 import time
 from datetime import datetime, timedelta
+import os
 
 import distro
 import psutil
@@ -16,7 +17,7 @@ class InfoLine(Widget):
         ri = distro.os_release_info()
         self.left_string = " ".join(
             [
-                f"[b]{platform.node()}[/]",
+                f"{os.getlogin()} @ [b]{platform.node()}[/]",
                 f"{ri['name']} {ri['version_id']}",
                 f"{platform.architecture()[0]} / {platform.release()}",
             ]

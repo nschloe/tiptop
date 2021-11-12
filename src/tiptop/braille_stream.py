@@ -41,7 +41,7 @@ class BrailleStream:
         self.maxval = maxval
         self._last_blocks = [0] * height
         # store all values for resize purposes
-        self.values: list[float] = [minval]
+        self.values: list[float] = [minval] * (2 * self.width)
         self.flipud = flipud
         self.lookup = num_to_braille_upside_down if flipud else num_to_braille
 
@@ -77,12 +77,33 @@ class BrailleStream:
         for k, char in enumerate(chars):
             g[k] = g[k][1:] + char
 
-        self.values.append(value)
+        self.values = self.values[1:] + [value]
         self._last_blocks = blocks
 
     @property
     def graph(self):
         return self._graphs[0 if self.graph_0_is_active else 1]
 
-    def resize(self, width: int, height: int):
-        return
+    def reset_width(self, width: int):
+        if width == self.width:
+            return
+        elif width > self.width:
+            diff = width - self.width
+            self._graphs = [[" " * diff + row for row in g] for g in self._graphs]
+            self.values = [self.minval] * diff + self.values
+        elif width < self.width:
+            self._graphs = [[row[-width:] for row in g] for g in self._graphs]
+            self.values = self.values[-width:]
+
+        self.width = width
+
+    def reset_height(self, height: int):
+        if height == self.height:
+            return
+
+        # recreate both graphs
+        self.height = height
+        blocks = [self.value_to_blocks(value) for value in self.values]
+
+        print(blocks)
+        assert False

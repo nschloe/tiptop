@@ -46,6 +46,8 @@ class Net(Widget):
         self.ip = s.getsockname()[0]
         s.close()
 
+    # would love to collect data upon each render(), but render is called too often
+    # <https://github.com/willmcgugan/textual/issues/162>
     def collect_data(self):
         addrs = psutil.net_if_addrs()[self.interface]
         ipv4 = []
@@ -112,7 +114,7 @@ class Net(Widget):
             box=box.SQUARE,
         )
 
-        t = Table(expand=True, show_header=False, padding=0)
+        t = Table(expand=True, show_header=False, padding=0, box=None)
         # Add ratio 1 to expand that column as much as possible
         t.add_column("graph", no_wrap=True, ratio=1)
         t.add_column("box", no_wrap=True, width=down_box.width)
@@ -136,3 +138,7 @@ class Net(Widget):
 
     def render(self):
         return self.content
+
+    async def on_resize(self, event):
+        self.sent_stream.reset_width(event.width - 25)
+        self.recv_stream.reset_width(event.width - 25)

@@ -31,6 +31,9 @@ def flatten(lst):
 
 class CPU(Widget):
     def on_mount(self):
+        self.width = None
+        self.height = None
+
         # self.max_graph_width = 200
 
         num_cores = psutil.cpu_count(logical=False)
@@ -92,7 +95,7 @@ class CPU(Widget):
                 stream.add_value(temp.current)
 
         lines_cpu = self.cpu_total_stream.graph
-        last_val_string = f"{self.cpu_total_stream.last_value:5.1f}%"
+        last_val_string = f"{self.cpu_total_stream.values[-1]:5.1f}%"
         lines0 = lines_cpu[0][: -len(last_val_string)] + last_val_string
         lines_cpu = [lines0] + lines_cpu[1:]
         #
@@ -101,7 +104,7 @@ class CPU(Widget):
         #
         if self.has_temps:
             lines_temp = self.temp_total_stream.graph
-            last_val_string = f"{round(self.temp_total_stream.last_value):3d}°C"
+            last_val_string = f"{round(self.temp_total_stream.values[-1]):3d}°C"
             lines0 = lines_temp[-1][: -len(last_val_string)] + last_val_string
             lines_temp = lines_temp[:-1] + [lines0]
             cpu_total_graph += "[color(5)]" + "\n".join(lines_temp) + "[/]"
@@ -109,7 +112,7 @@ class CPU(Widget):
         lines = [
             f"[{cpu_percent_colors[i]}]"
             + f"{self.cpu_percent_streams[i].graph[0]} "
-            + f"{round(self.cpu_percent_streams[i].last_value):3d}%[/]"
+            + f"{round(self.cpu_percent_streams[i].values[-1]):3d}%[/]"
             for i in self.core_order
         ]
         if self.has_temps:
@@ -117,7 +120,7 @@ class CPU(Widget):
             for k, stream in enumerate(self.core_temp_streams):
                 lines[
                     2 * k
-                ] += f" [color(5)]{stream.graph[0]} {round(stream.last_value)}°C[/]"
+                ] += f" [color(5)]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
 
         # load_avg = os.getloadavg()
         # subtitle = f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
@@ -143,7 +146,7 @@ class CPU(Widget):
 
         self.panel = Panel(
             t,
-            title=f"cpu - {self.brand_raw}",
+            title=f"cpu - {self.brand_raw} - {self.width} {self.height}",
             title_align="left",
             border_style="color(4)",
             box=box.SQUARE,
@@ -154,3 +157,16 @@ class CPU(Widget):
 
     def render(self):
         return self.panel
+
+    async def on_resize(self, event):
+        self.width = event.width
+        self.height = event.height
+
+        self.cpu_total_stream.reset_width(self.width - 40)
+        # cpu total stream height: divide by two and round _up_
+        self.cpu_total_stream.reset_height(-((4 - self.height) // 2))
+
+        if self.has_temps:
+            self.temp_total_stream.reset_width(self.width - 40)
+            # temp total stream height: divide by two and round _down_
+            # self.temp_total_stream.reset_width((self.height - 4) // 2)

@@ -10,6 +10,8 @@ from .braille_stream import BrailleStream
 
 class Mem(Widget):
     def on_mount(self):
+        self.is_first_render = True
+
         self.mem_total_bytes = psutil.virtual_memory().total
         self.mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
 
@@ -19,8 +21,6 @@ class Mem(Widget):
             BrailleStream(40, 4, 0.0, self.mem_total_bytes),
             BrailleStream(40, 4, 0.0, self.mem_total_bytes),
         ]
-
-        self.collect_data()
         self.set_interval(2.0, self.collect_data)
 
     def collect_data(self):
@@ -61,4 +61,11 @@ class Mem(Widget):
         self.refresh()
 
     def render(self) -> Panel:
+        if self.is_first_render:
+            self.collect_data()
+            self.is_first_render = False
         return self.panel
+
+    async def on_resize(self, event):
+        for ms in self.mem_streams:
+            ms.reset_width(event.width - 4)
