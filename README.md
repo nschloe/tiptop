@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/nschloe/tiptop"><img alt="tiptop" src="https://nschloe.github.io/tiptop/tiptop.svg" width="60%"></a>
+  <a href="https://github.com/nschloe/tiptop"><img alt="tiptop" src="https://raw.githubusercontent.com/nschloe/tiptop/gh-pages/tiptop.svg" width="60%"/></a>
   <p align="center">Command-line system monitoring.</p>
 </p>
 
@@ -11,6 +11,10 @@
 
 [![Discord](https://img.shields.io/static/v1?logo=discord&label=chat&message=on%20discord&color=7289da&style=flat-square)](https://discord.gg/Z6DMsJh4Hr)
 
+[![Donate](https://img.shields.io/badge/-Donate-yellow?logo=paypal)](https://paypal.me/nschloe)
+[![Sponsor](https://img.shields.io/badge/-Sponsor-red?logo=github)](https://github.com/sponsors/nschloe)
+[![Coffee](https://img.shields.io/badge/-Buy%20me%20a%20Coffee-grey?logo=Ko-fi)](https://ko-fi.com/nschloe)
+
 [![gh-actions](https://img.shields.io/github/workflow/status/nschloe/tiptop/ci?style=flat-square)](https://github.com/nschloe/tiptop/actions?query=workflow%3Aci)
 [![codecov](https://img.shields.io/codecov/c/github/nschloe/tiptop.svg?style=flat-square)](https://app.codecov.io/gh/nschloe/tiptop)
 [![LGTM](https://img.shields.io/lgtm/grade/python/github/nschloe/tiptop.svg?style=flat-square)](https://lgtm.com/projects/g/nschloe/tiptop)
@@ -21,7 +25,7 @@ tiptop is a command-line system monitoring tool in the spirit of
 interesting system stats, graphs it, and works on all operating systems.
 
 <p align="center">
-<img alt="screenshot" src="https://nschloe.github.io/tiptop/screenshot.svg" width="90%"/>
+<img alt="screenshot" src="https://raw.githubusercontent.com/nschloe/tiptop/gh-pages/screenshot.png" width="100%"/>
 </p>
 
 tiptop uses [Textual](https://github.com/willmcgugan/textual/) for layouting and [psutil](https://github.com/giampaolo/psutil) for fetching system data.
