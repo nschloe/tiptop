@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from math import ceil
 
+# String lookup and list lookup are equally fast, see
+# <https://gist.github.com/nschloe/d790a873081dc504193c99d3758755b4>
 num_to_braille = [
     [" ", "⢀", "⢠", "⢰", "⢸"],
     ["⡀", "⣀", "⣠", "⣰", "⣸"],
@@ -17,6 +19,11 @@ num_to_braille_upside_down = [
     ["⠇", "⠏", "⠟", "⠿", "⢿"],
     ["⡇", "⡏", "⡟", "⡿", "⣿"],
 ]
+
+
+def _transpose(l):
+    # https://stackoverflow.com/a/6473724/353337
+    return map(list, zip(*l))
 
 
 class BrailleStream:
@@ -41,7 +48,8 @@ class BrailleStream:
         self.maxval = maxval
         self._last_blocks = [0] * height
         # store all values for resize purposes
-        self.values: list[float] = [minval] * (2 * self.width)
+        # we store one more value than what is displayed to account for the "old" graph
+        self.values: list[float] = [minval] * (2 * self.width + 1)
         self.flipud = flipud
         self.lookup = num_to_braille_upside_down if flipud else num_to_braille
 
@@ -90,10 +98,10 @@ class BrailleStream:
         elif width > self.width:
             diff = width - self.width
             self._graphs = [[" " * diff + row for row in g] for g in self._graphs]
-            self.values = [self.minval] * diff + self.values
+            self.values = [self.minval] * (2 * diff) + self.values
         elif width < self.width:
             self._graphs = [[row[-width:] for row in g] for g in self._graphs]
-            self.values = self.values[-width:]
+            self.values = self.values[-(2 * width + 1) :]
 
         self.width = width
 
@@ -105,5 +113,37 @@ class BrailleStream:
         self.height = height
         blocks = [self.value_to_blocks(value) for value in self.values]
 
-        print(blocks)
-        assert False
+        assert len(self.values) == 2 * self.width + 1
+        g = [
+            # 0 -> 2 * k + 1
+            [
+                [
+                    self.lookup[i0][i1]
+                    for i0, i1 in zip(blocks[2 * k], blocks[2 * k + 1])
+                ]
+                for k in range(self.width)
+            ],
+            # 1 -> 2 * k + 2
+            [
+                [
+                    self.lookup[i0][i1]
+                    for i0, i1 in zip(blocks[2 * k + 1], blocks[2 * k + 2])
+                ]
+                for k in range(self.width)
+            ],
+        ]
+        if self.flipud:
+            g = [
+                [row[::-1] for row in g[0]],
+                [row[::-1] for row in g[1]],
+            ]
+        # transpose and join
+        self._graphs = [
+            ["".join(row) for row in _transpose(g[0])],
+            ["".join(row) for row in _transpose(g[1])],
+        ]
+        if not self.graph_0_is_active:
+            self._graphs = [self._graphs[1], self._graphs[0]]
+
+        self._last_blocks = blocks[-1]
+        self.height = height

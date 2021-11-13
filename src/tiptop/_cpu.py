@@ -59,6 +59,7 @@ class CPU(Widget):
             self.has_temps = True
             temp_low = 20.0
             temp_high = temps["coretemp"][0].high
+            assert temp_high is not None
             self.temp_total_stream = BrailleStream(
                 50, 7, temp_low, temp_high, flipud=True
             )
@@ -126,7 +127,6 @@ class CPU(Widget):
         # subtitle = f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
         subtitle = f"{round(psutil.cpu_freq().current):4d} MHz"
 
-        # info_box_width = max(len(line) for line in lines) + 4
         info_box = Panel(
             "\n".join(lines),
             title=self.box_title,
@@ -138,10 +138,12 @@ class CPU(Widget):
             expand=False,
         )
 
-        t = Table(expand=True, show_header=False, padding=0)
+        t = Table(expand=True, show_header=False, padding=0, box=None)
         # Add ratio 1 to expand that column as much as possible
         t.add_column("graph", no_wrap=True, ratio=1)
         t.add_column("box", no_wrap=True, justify="left")
+        # waiting for vertical alignment in rich here
+        # <https://github.com/willmcgugan/rich/issues/1590>
         t.add_row(cpu_total_graph, info_box)
 
         self.panel = Panel(
@@ -162,11 +164,11 @@ class CPU(Widget):
         self.width = event.width
         self.height = event.height
 
-        self.cpu_total_stream.reset_width(self.width - 40)
+        self.cpu_total_stream.reset_width(self.width - 35)
         # cpu total stream height: divide by two and round _up_
-        self.cpu_total_stream.reset_height(-((4 - self.height) // 2))
+        self.cpu_total_stream.reset_height(-((2 - self.height) // 2))
 
         if self.has_temps:
-            self.temp_total_stream.reset_width(self.width - 40)
+            self.temp_total_stream.reset_width(self.width - 35)
             # temp total stream height: divide by two and round _down_
-            # self.temp_total_stream.reset_width((self.height - 4) // 2)
+            self.temp_total_stream.reset_height((self.height - 2) // 2)

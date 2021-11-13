@@ -1,7 +1,7 @@
+import os
 import platform
 import time
 from datetime import datetime, timedelta
-import os
 
 import distro
 import psutil
@@ -40,8 +40,8 @@ class InfoLine(Widget):
 
         table = Table(show_header=False, expand=True, box=None, padding=0)
         if self.width < 100:
-            table.add_column(justify="left", no_wrap=True, ratio=1)
-            table.add_column(justify="right", no_wrap=True, ratio=1)
+            table.add_column(justify="left", no_wrap=True)
+            table.add_column(justify="right", no_wrap=True)
             table.add_row(self.left_string, ", ".join(right))
         else:
             table.add_column(justify="left", no_wrap=True, ratio=1)
