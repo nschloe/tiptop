@@ -39,8 +39,7 @@ class Mem(Widget):
             )
             graphs.append(
                 "\n".join(
-                    [val_string + stream.graph[0][len(val_string):]]
-                    + stream.graph[1:]
+                    [val_string + stream.graph[0][len(val_string) :]] + stream.graph[1:]
                 )
             )
 
