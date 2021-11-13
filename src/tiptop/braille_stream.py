@@ -109,7 +109,7 @@ class BrailleStream:
         if height == self.height:
             return
 
-        # recreate both graphs
+        # recreate both _graphs
         self.height = height
         blocks = [self.value_to_blocks(value) for value in self.values]
 
@@ -132,7 +132,7 @@ class BrailleStream:
                 for k in range(self.width)
             ],
         ]
-        if self.flipud:
+        if not self.flipud:
             g = [
                 [row[::-1] for row in g[0]],
                 [row[::-1] for row in g[1]],
@@ -142,8 +142,7 @@ class BrailleStream:
             ["".join(row) for row in _transpose(g[0])],
             ["".join(row) for row in _transpose(g[1])],
         ]
-        if not self.graph_0_is_active:
+        if self.graph_0_is_active:
             self._graphs = [self._graphs[1], self._graphs[0]]
 
         self._last_blocks = blocks[-1]
-        self.height = height
