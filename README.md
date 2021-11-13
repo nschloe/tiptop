@@ -23,6 +23,12 @@ tiptop is a command-line system monitoring tool in the spirit of
 [top](https://en.wikipedia.org/wiki/Top_(software)). It displays various
 interesting system stats, graphs it, and works on all operating systems.
 
+Install and run with
+```
+pip install tiptop
+tiptop
+```
+
 <p align="center">
 <img alt="screenshot" src="https://raw.githubusercontent.com/nschloe/tiptop/gh-pages/screenshot.png" width="100%"/>
 </p>

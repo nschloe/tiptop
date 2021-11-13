@@ -71,3 +71,6 @@ class ProcsList(Widget):
 
     def render(self) -> Panel:
         return self.panel
+
+    async def on_resize(self, event):
+        self.max_num_procs = event.height - 3
