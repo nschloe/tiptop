@@ -39,7 +39,7 @@ class Mem(Widget):
             )
             graphs.append(
                 "\n".join(
-                    [val_string + stream.graph[0][: -len(val_string)]]
+                    [val_string + stream.graph[0][len(val_string):]]
                     + stream.graph[1:]
                 )
             )
@@ -69,3 +69,13 @@ class Mem(Widget):
     async def on_resize(self, event):
         for ms in self.mem_streams:
             ms.reset_width(event.width - 4)
+
+        # split the available event.height-2 into 4 even blocks, and if there's
+        # a rest, divide it up into the first, e.g.,
+        # 17 -> 5, 4, 4, 4
+        heights = [(event.height - 2) // 4] * 4
+        for k in range((event.height - 2) % 4):
+            heights[k] += 1
+
+        for ms, h in zip(self.mem_streams, heights):
+            ms.reset_height(h)

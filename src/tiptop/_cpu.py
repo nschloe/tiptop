@@ -148,7 +148,7 @@ class CPU(Widget):
 
         self.panel = Panel(
             t,
-            title=f"cpu - {self.brand_raw} - {self.width} {self.height}",
+            title=f"cpu - {self.brand_raw}",
             title_align="left",
             border_style="color(4)",
             box=box.SQUARE,
