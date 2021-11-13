@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/nschloe/tiptop"><img alt="tiptop" src="https://nschloe.github.io/tiptop/tiptop.svg" width="60%"></a>
+  <a href="https://github.com/nschloe/tiptop"><img alt="tiptop" src="https://raw.githubusercontent.com/nschloe/tiptop/gh-pages/tiptop.svg" width="60%"/></a>
   <p align="center">Command-line system monitoring.</p>
 </p>
 
@@ -21,8 +21,8 @@ tiptop is a command-line system monitoring tool in the spirit of
 interesting system stats, graphs it, and works on all operating systems.
 
 <p align="center">
-<img alt="screenshot" src="https://nschloe.github.io/tiptop/screenshot.svg" width="90%"/>
-</p>
+<img alt="screenshot" src="https://raw.githubusercontent.com/nschloe/tiptop/gh-pages/screenshot.png" width="90%"/>
+</p>gg
 
 tiptop uses [Textual](https://github.com/willmcgugan/textual/) for layouting and [psutil](https://github.com/giampaolo/psutil) for fetching system data.
 
