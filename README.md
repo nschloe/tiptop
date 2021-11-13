@@ -21,8 +21,8 @@ tiptop is a command-line system monitoring tool in the spirit of
 interesting system stats, graphs it, and works on all operating systems.
 
 <p align="center">
-<img alt="screenshot" src="https://raw.githubusercontent.com/nschloe/tiptop/gh-pages/screenshot.png" width="90%"/>
-</p>gg
+<img alt="screenshot" src="https://raw.githubusercontent.com/nschloe/tiptop/gh-pages/screenshot.png" width="100%"/>
+</p>
 
 tiptop uses [Textual](https://github.com/willmcgugan/textual/) for layouting and [psutil](https://github.com/giampaolo/psutil) for fetching system data.
 
