@@ -17,18 +17,21 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 
 tiptop is a command-line system monitoring tool in the spirit of
-[top](https://en.wikipedia.org/wiki/Top_(software)). It displays various interesting system stats, graphs it, and works on all operating systems.
+[top](https://en.wikipedia.org/wiki/Top_(software)). It displays various
+interesting system stats, graphs it, and works on all operating systems.
 
+<p align="center">
+<img alt="screenshot" src="https://nschloe.github.io/tiptop/screenshot.svg" width="90%"/>
+</p>
 
+tiptop uses [Textual](https://github.com/willmcgugan/textual/) for layouting and [psutil](https://github.com/giampaolo/psutil) for fetching system data.
 
-Other top alternatives:
+Other top alternatives in alphabetical order:
 
-- [bpytop](https://github.com/aristocratos/bpytop)
-- [btop](https://github.com/aristocratos/btop)
-- [bashtop](https://github.com/aristocratos/bashtop)
+- [bashtop](https://github.com/aristocratos/bashtop), [bpytop](https://github.com/aristocratos/bpytop), [btop](https://github.com/aristocratos/btop) (which inspired tiptop)
+- [Glances](https://github.com/nicolargo/glances)
 - [gtop](https://github.com/aksakalli/gtop)
 - [htop](https://github.com/htop-dev/htop)
-- [Glances](https://github.com/nicolargo/glances)
 
 See [here](https://github.com/nschloe/stargraph#command-line-system-monitoring)
 for a comparison by GitHub stars.
