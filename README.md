@@ -16,7 +16,8 @@
 [![LGTM](https://img.shields.io/lgtm/grade/python/github/nschloe/tiptop.svg?style=flat-square)](https://lgtm.com/projects/g/nschloe/tiptop)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 
-
+tiptop is a command-line system monitoring tool in the spirit of
+[top](https://en.wikipedia.org/wiki/Top_(software)). It displays various interesting system stats, graphs it, and works on all operating systems.
 
 
 
