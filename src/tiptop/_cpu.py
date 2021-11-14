@@ -53,7 +53,10 @@ class CPU(Widget):
             # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
         ]
 
-        temps = psutil.sensors_temperatures()
+        try:
+            temps = psutil.sensors_temperatures()
+        except AttributeError:
+            temps = {}  # This is just a quick fix for macOS, see #6
         self.has_temps = False
         if "coretemp" in temps:
             self.has_temps = True
