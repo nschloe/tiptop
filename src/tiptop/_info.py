@@ -18,7 +18,7 @@ class InfoLine(Widget):
         self.left_string = " ".join(
             [
                 f"{os.getlogin()} @ [b]{platform.node()}[/]",
-                f"{ri['name']} {ri['version_id']}",
+                f"{ri['name']} {ri['version_id']}" if ri else platform.system(),
                 f"{platform.architecture()[0]} / {platform.release()}",
             ]
         )
