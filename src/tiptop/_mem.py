@@ -26,7 +26,7 @@ class Mem(Widget):
     def collect_data(self):
         mem = psutil.virtual_memory()
         names = ["used  ", "avail ", "cached", "free  "]
-        values = [mem.used, mem.available, mem.cached, mem.free]
+        values = [mem.used, mem.available, mem.cached if hasattr(mem, 'cached') else 0, mem.free]
         graphs = []
         for name, stream, val in zip(names, self.mem_streams, values):
             stream.add_value(val)
