@@ -29,9 +29,11 @@ def run():
         async def on_mount(self) -> None:
             grid = await self.view.dock_grid(edge="left")
 
-            # 8/13: approx golden ratio :)
-            grid.add_column(fraction=8, name="left")
-            grid.add_column(fraction=13, name="right")
+            # 34/55: approx golden ratio. See
+            # <https://gist.github.com/nschloe/ab6c3c90b4a6bc02c40405803fa8fa35>
+            # for the error.
+            grid.add_column(fraction=34, name="left")
+            grid.add_column(fraction=55, name="right")
 
             grid.add_row(size=1, name="topline")
             grid.add_row(fraction=1, name="top")
