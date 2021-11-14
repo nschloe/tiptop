@@ -26,7 +26,7 @@ class ProcsList(Widget):
         ]
         processes = sorted(
             psutil.process_iter(attrs),
-            key=lambda item: item.info["cpu_percent"],
+            key=lambda item: float(item.info["cpu_percent"] or 0.0),
             reverse=True,
         )
 
@@ -46,17 +46,20 @@ class ProcsList(Widget):
         table.add_column("[u]cpu%[/]", width=5, no_wrap=True)
 
         for p in processes[: self.max_num_procs]:
-            table.add_row(
-                f"{p.info['pid']:6d}",
-                p.info["name"],
-                " ".join(p.info["cmdline"][1:]),
-                f"{p.info['num_threads']:3d}",
-                p.info["username"],
-                sizeof_fmt(p.info["memory_info"].rss, suffix="", sep=""),
-                f"{p.info['cpu_percent']:5.1f}",
-            )
+            try:
+                table.add_row(
+                    f"{p.info['pid']:6d}",
+                    p.info["name"],
+                    " ".join(p.info["cmdline"][1:]),
+                    f"{p.info['num_threads']:3d}",
+                    p.info["username"],
+                    sizeof_fmt(p.info["memory_info"].rss, suffix="", sep=""),
+                    f"{p.info['cpu_percent']:5.1f}",
+                )
+            except TypeError:
+                table.add_row("-", p.info["name"], "-", "-", p.info["username"], "-", "-")
 
-        total_num_threads = sum(p.info["num_threads"] for p in processes)
+        total_num_threads = sum(int(p.info["num_threads"] or 0) for p in processes)
         num_sleep = sum(p.info["status"] == "sleeping" for p in processes)
 
         self.panel = Panel(
