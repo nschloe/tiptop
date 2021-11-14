@@ -1,3 +1,9 @@
+try:
+    # Python 3.8+
+    from importlib import metadata
+except ImportError:
+    import importlib_metadata as metadata
+
 import psutil
 from rich import box
 from rich.panel import Panel
@@ -9,6 +15,14 @@ from ._helpers import sizeof_fmt
 
 class ProcsList(Widget):
     def on_mount(self):
+        self.tiptop_string = "tiptop"
+        try:
+            __version__ = metadata.version("tiptop")
+        except metadata.PackageNotFoundError:
+            pass
+        else:
+            self.tiptop_string += f" v{__version__}"
+
         self.max_num_procs = 100
         self.collect_data()
         self.set_interval(6.0, self.collect_data)
@@ -63,6 +77,8 @@ class ProcsList(Widget):
             table,
             title=f"proc - {len(processes)} ({total_num_threads} thr), {num_sleep} slp",
             title_align="left",
+            subtitle=self.tiptop_string,
+            subtitle_align="right",
             border_style="color(6)",
             box=box.SQUARE,
         )
