@@ -14,12 +14,27 @@ class InfoLine(Widget):
         self.width = 0
         self.height = 0
         self.set_interval(2.0, self.refresh)
-        ri = distro.os_release_info()
+
+        system = platform.system()
+        if system == "Linux":
+            ri = distro.os_release_info()
+            system_string = " ".join(
+                [
+                    ri["name"],
+                    ri["version_id"],
+                    f"{platform.architecture()[0]} / {platform.release()}",
+                ]
+            )
+        elif system == "Darwin":
+            system_string = f"macOS {platform.mac_ver()[0]}"
+        else:
+            # fallback
+            system_string = ""
+
         self.left_string = " ".join(
             [
                 f"{os.getlogin()} @ [b]{platform.node()}[/]",
-                f"{ri['name']} {ri['version_id']}",
-                f"{platform.architecture()[0]} / {platform.release()}",
+                system_string,
             ]
         )
         self.boot_time = psutil.boot_time()
