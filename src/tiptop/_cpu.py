@@ -53,19 +53,22 @@ class CPU(Widget):
             # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
         ]
 
-        temps = psutil.sensors_temperatures()
-        self.has_temps = False
-        if "coretemp" in temps:
-            self.has_temps = True
-            temp_low = 20.0
-            temp_high = temps["coretemp"][0].high
-            assert temp_high is not None
-            self.temp_total_stream = BrailleStream(
-                50, 7, temp_low, temp_high, flipud=True
-            )
-            self.core_temp_streams = [
-                BrailleStream(5, 1, temp_low, temp_high) for _ in range(num_cores)
-            ]
+        try:
+            temps = psutil.sensors_temperatures()
+        except AttributeError:
+            self.has_temps = False
+        else:
+            self.has_temps = "coretemp" in temps
+            if self.has_temps:
+                temp_low = 20.0
+                temp_high = temps["coretemp"][0].high
+                assert temp_high is not None
+                self.temp_total_stream = BrailleStream(
+                    50, 7, temp_low, temp_high, flipud=True
+                )
+                self.core_temp_streams = [
+                    BrailleStream(5, 1, temp_low, temp_high) for _ in range(num_cores)
+                ]
 
         self.box_title = ", ".join(
             [
@@ -165,10 +168,14 @@ class CPU(Widget):
         self.height = event.height
 
         self.cpu_total_stream.reset_width(self.width - 35)
-        # cpu total stream height: divide by two and round _up_
-        self.cpu_total_stream.reset_height(-((2 - self.height) // 2))
 
         if self.has_temps:
+            # cpu total stream height: divide by two and round _up_
+            self.cpu_total_stream.reset_height(-((2 - self.height) // 2))
+            #
             self.temp_total_stream.reset_width(self.width - 35)
             # temp total stream height: divide by two and round _down_
             self.temp_total_stream.reset_height((self.height - 2) // 2)
+        else:
+            # full size cpu stream
+            self.cpu_total_stream.reset_height(self.height - 2)
