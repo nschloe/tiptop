@@ -15,20 +15,36 @@ class Mem(Widget):
         self.mem_total_bytes = psutil.virtual_memory().total
         self.mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
 
-        self.mem_streams = [
-            BrailleStream(40, 4, 0.0, self.mem_total_bytes),
-            BrailleStream(40, 4, 0.0, self.mem_total_bytes),
-            BrailleStream(40, 4, 0.0, self.mem_total_bytes),
-            BrailleStream(40, 4, 0.0, self.mem_total_bytes),
-        ]
+        mem = psutil.virtual_memory()
+
+        self.names = []
+        if hasattr(mem, "used"):
+            self.names.append("used")
+        if hasattr(mem, "available"):
+            self.names.append("avail")
+        if hasattr(mem, "cached"):
+            self.names.append("cached")
+        if hasattr(mem, "free"):
+            self.names.append("free")
+
+        # append spaces to make all names equally long
+        maxlen = max(len(string) for string in self.names)
+        self.names = [name + " " * (maxlen - len(name)) for name in self.names]
+
+        # can't use
+        # [BrailleStream(40, 4, 0.0, self.mem_total_bytes)] * len(self.names)
+        # since that only creates one BrailleStream, references n times.
+        self.mem_streams = []
+        for _ in range(len(self.names)):
+            self.mem_streams.append(BrailleStream(40, 4, 0.0, self.mem_total_bytes))
+
         self.set_interval(2.0, self.collect_data)
 
     def collect_data(self):
         mem = psutil.virtual_memory()
-        names = ["used  ", "avail ", "cached", "free  "]
         values = [mem.used, mem.available, mem.cached, mem.free]
         graphs = []
-        for name, stream, val in zip(names, self.mem_streams, values):
+        for name, stream, val in zip(self.names, self.mem_streams, values):
             stream.add_value(val)
             val_string = " ".join(
                 [
@@ -45,10 +61,8 @@ class Mem(Widget):
 
         table = Table(box=None, expand=True, padding=0, show_header=False)
         table.add_column(justify="left", no_wrap=True)
-        table.add_row("[color(2)]" + graphs[0] + "[/]")
-        table.add_row("[color(3)]" + graphs[1] + "[/]")
-        table.add_row("[color(4)]" + graphs[2] + "[/]")
-        table.add_row("[color(5)]" + graphs[3] + "[/]")
+        for k, graph in enumerate(graphs):
+            table.add_row(f"[color({k + 2})]{graph}[/]")
 
         self.panel = Panel(
             table,
@@ -69,11 +83,12 @@ class Mem(Widget):
         for ms in self.mem_streams:
             ms.reset_width(event.width - 4)
 
-        # split the available event.height-2 into 4 even blocks, and if there's
-        # a rest, divide it up into the first, e.g.,
+        # split the available event.height-2 into n even blocks, and if there's
+        # a rest, divide it up into the first, e.g., with n=4
         # 17 -> 5, 4, 4, 4
-        heights = [(event.height - 2) // 4] * 4
-        for k in range((event.height - 2) % 4):
+        n = len(self.names)
+        heights = [(event.height - 2) // n] * n
+        for k in range((event.height - 2) % n):
             heights[k] += 1
 
         for ms, h in zip(self.mem_streams, heights):
