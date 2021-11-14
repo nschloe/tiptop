@@ -13,11 +13,15 @@ from .braille_stream import BrailleStream
 
 class Net(Widget):
     def on_mount(self):
-        # try to find non-lo interface that is up
+        # try to find non-lo and non-docker interface that is up
         self.interface = None
         stats = psutil.net_if_stats()
         for string, stats in stats.items():
-            if string != "lo" and stats.isup:
+            if (
+                not string.startswith("lo")
+                and not string.startswith("docker")
+                and stats.isup
+            ):
                 self.interface = string
                 break
 
