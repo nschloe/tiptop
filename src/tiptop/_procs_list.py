@@ -57,7 +57,9 @@ class ProcsList(Widget):
                     f"{p.info['cpu_percent']:5.1f}",
                 )
             except TypeError:
-                table.add_row("-", p.info["name"], "-", "-", p.info["username"], "-", "-")
+                table.add_row(
+                    "-", p.info["name"], "-", "-", p.info["username"], "-", "-"
+                )
 
         total_num_threads = sum(int(p.info["num_threads"] or 0) for p in processes)
         num_sleep = sum(p.info["status"] == "sleeping" for p in processes)
