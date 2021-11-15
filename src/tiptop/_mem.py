@@ -42,9 +42,9 @@ class Mem(Widget):
 
     def collect_data(self):
         mem = psutil.virtual_memory()
-        values = [mem.used, mem.available, mem.cached, mem.free]
         graphs = []
-        for name, stream, val in zip(self.names, self.mem_streams, values):
+        for name, stream in zip(self.names, self.mem_streams):
+            val = getattr(mem, name)
             stream.add_value(val)
             val_string = " ".join(
                 [
