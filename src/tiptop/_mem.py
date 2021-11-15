@@ -24,8 +24,8 @@ class Mem(Widget):
 
         # append spaces to make all names equally long
         maxlen = max(len(string) for string in self.attrs)
-        maxlen = max(maxlen, 5)
-        self.labels = [attr + " " * (maxlen - len(attr)) for attr in self.attrs]
+        maxlen = min(maxlen, 5)
+        self.labels = [attr[:maxlen].ljust(maxlen) for attr in self.attrs]
 
         # can't use
         # [BrailleStream(40, 4, 0.0, self.mem_total_bytes)] * len(self.names)
