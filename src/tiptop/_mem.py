@@ -18,14 +18,19 @@ class Mem(Widget):
         mem = psutil.virtual_memory()
 
         self.names = []
+        self.values = []
         if hasattr(mem, "used"):
             self.names.append("used")
+            self.values.append(mem.used)
         if hasattr(mem, "available"):
             self.names.append("avail")
+            self.values.append(mem.available)
         if hasattr(mem, "cached"):
             self.names.append("cached")
+            self.values.append(mem.cached)
         if hasattr(mem, "free"):
             self.names.append("free")
+            self.values.append(mem.free)
 
         # append spaces to make all names equally long
         maxlen = max(len(string) for string in self.names)
@@ -41,10 +46,8 @@ class Mem(Widget):
         self.set_interval(2.0, self.collect_data)
 
     def collect_data(self):
-        mem = psutil.virtual_memory()
-        values = [mem.used, mem.available, mem.cached, mem.free]
         graphs = []
-        for name, stream, val in zip(self.names, self.mem_streams, values):
+        for name, stream, val in zip(self.names, self.mem_streams, self.values):
             stream.add_value(val)
             val_string = " ".join(
                 [
