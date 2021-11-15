@@ -16,26 +16,22 @@ class Mem(Widget):
         self.mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
 
         # check which mem sections are available on the machine
-        self.names = []
+        self.attrs = []
         mem = psutil.virtual_memory()
-        if hasattr(mem, "used"):
-            self.names.append("used")
-        if hasattr(mem, "available"):
-            self.names.append("avail")
-        if hasattr(mem, "cached"):
-            self.names.append("cached")
-        if hasattr(mem, "free"):
-            self.names.append("free")
+        for attr in ["used", "available", "cached", "free"]:
+            if hasattr(mem, attr):
+                self.attrs.append(attr)
 
         # append spaces to make all names equally long
-        maxlen = max(len(string) for string in self.names)
-        self.names = [name + " " * (maxlen - len(name)) for name in self.names]
+        maxlen = max(len(string) for string in self.attrs)
+        maxlen = max(maxlen, 5)
+        self.labels = [attr + " " * (maxlen - len(attr)) for attr in self.attrs]
 
         # can't use
         # [BrailleStream(40, 4, 0.0, self.mem_total_bytes)] * len(self.names)
         # since that only creates one BrailleStream, references n times.
         self.mem_streams = []
-        for _ in range(len(self.names)):
+        for _ in range(len(self.attrs)):
             self.mem_streams.append(BrailleStream(40, 4, 0.0, self.mem_total_bytes))
 
         self.set_interval(2.0, self.collect_data)
@@ -43,12 +39,12 @@ class Mem(Widget):
     def collect_data(self):
         mem = psutil.virtual_memory()
         graphs = []
-        for name, stream in zip(self.names, self.mem_streams):
-            val = getattr(mem, name)
+        for attr, label, stream in zip(self.attrs, self.labels, self.mem_streams):
+            val = getattr(mem, attr)
             stream.add_value(val)
             val_string = " ".join(
                 [
-                    name,
+                    label,
                     sizeof_fmt(val, fmt=".2f"),
                     f"({val / self.mem_total_bytes * 100:.0f}%)",
                 ]
@@ -86,7 +82,7 @@ class Mem(Widget):
         # split the available event.height-2 into n even blocks, and if there's
         # a rest, divide it up into the first, e.g., with n=4
         # 17 -> 5, 4, 4, 4
-        n = len(self.names)
+        n = len(self.attrs)
         heights = [(event.height - 2) // n] * n
         for k in range((event.height - 2) % n):
             heights[k] += 1
