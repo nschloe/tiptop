@@ -15,9 +15,9 @@ class Mem(Widget):
         self.mem_total_bytes = psutil.virtual_memory().total
         self.mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
 
-        mem = psutil.virtual_memory()
-
+        # check which mem sections are available on the machine
         self.names = []
+        mem = psutil.virtual_memory()
         if hasattr(mem, "used"):
             self.names.append("used")
         if hasattr(mem, "available"):
