@@ -1,6 +1,7 @@
 import cpuinfo
 import psutil
 from rich import box
+from rich.padding import Padding
 from rich.panel import Panel
 from rich.table import Table
 from textual.widget import Widget
@@ -31,8 +32,9 @@ def flatten(lst):
 
 class CPU(Widget):
     def on_mount(self):
-        self.width = None
-        self.height = None
+        self.is_first_render = True
+        self.width = 0
+        self.height = 0
 
         # self.max_graph_width = 200
 
@@ -78,7 +80,6 @@ class CPU(Widget):
         )
 
         self.brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
-        self.collect_data()
         self.set_interval(2.0, self.collect_data)
 
     def collect_data(self):
@@ -141,12 +142,16 @@ class CPU(Widget):
             expand=False,
         )
 
+        # Manually adjust top margin. Waiting for vertical alignment in Rich.
+        # <https://github.com/willmcgugan/rich/issues/1590>
+        info_box_height = len(lines) + 2
+        top_margin = (self.height - 2 - info_box_height) // 2
+        info_box = Padding(info_box, (top_margin, 0, 0, 0))
+
         t = Table(expand=True, show_header=False, padding=0, box=None)
         # Add ratio 1 to expand that column as much as possible
         t.add_column("graph", no_wrap=True, ratio=1)
         t.add_column("box", no_wrap=True, justify="left")
-        # waiting for vertical alignment in rich here
-        # <https://github.com/willmcgugan/rich/issues/1590>
         t.add_row(cpu_total_graph, info_box)
 
         self.panel = Panel(
@@ -161,6 +166,9 @@ class CPU(Widget):
         self.refresh()
 
     def render(self):
+        if self.is_first_render:
+            self.collect_data()
+            self.is_first_render = False
         return self.panel
 
     async def on_resize(self, event):

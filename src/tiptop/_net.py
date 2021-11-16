@@ -130,7 +130,7 @@ class Net(Widget):
 
         ipv4 = "\n      ".join(ipv4)
         ipv6 = "\n      ".join(ipv6)
-        g = Group(t, f"IPv4: {ipv4}", f"IPv6: {ipv6}")
+        g = Group(t, f"[b]IPv4:[/] {ipv4}", f"[b]IPv6:[/] {ipv6}")
 
         self.content = Panel(
             g,
