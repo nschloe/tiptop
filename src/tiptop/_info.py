@@ -18,13 +18,11 @@ class InfoLine(Widget):
         system = platform.system()
         if system == "Linux":
             ri = distro.os_release_info()
-            system_string = " ".join(
-                [
-                    ri["name"],
-                    ri["version_id"],
-                    f"{platform.architecture()[0]} / {platform.release()}",
-                ]
-            )
+            system_list = [ri["name"]]
+            if "version_id" in ri:
+                system_list.append(ri["version_id"])
+            system_list.append(f"{platform.architecture()[0]} / {platform.release()}")
+            system_string = " ".join(system_list)
         elif system == "Darwin":
             system_string = f"macOS {platform.mac_ver()[0]}"
         else:
