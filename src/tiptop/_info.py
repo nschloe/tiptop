@@ -1,4 +1,4 @@
-import os
+import getpass
 import platform
 import time
 from datetime import datetime, timedelta
@@ -13,7 +13,16 @@ class InfoLine(Widget):
     def on_mount(self):
         self.width = 0
         self.height = 0
-        self.set_interval(2.0, self.refresh)
+        self.set_interval(1.0, self.refresh)
+
+        # The getlogin docs say:
+        # > For most purposes, it is more useful to use getpass.getuser() [...]
+        # username = os.getlogin()
+        username = getpass.getuser()
+        ustring = f"{username} @"
+        node = platform.node()
+        if node:
+            ustring += f" [b]{platform.node()}[/]"
 
         system = platform.system()
         if system == "Linux":
@@ -31,12 +40,7 @@ class InfoLine(Widget):
             # fallback
             system_string = ""
 
-        self.left_string = " ".join(
-            [
-                f"{os.getlogin()} @ [b]{platform.node()}[/]",
-                system_string,
-            ]
-        )
+        self.left_string = " ".join([ustring, system_string])
         self.boot_time = psutil.boot_time()
 
     def render(self):

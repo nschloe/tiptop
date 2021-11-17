@@ -178,12 +178,12 @@ class CPU(Widget):
         self.cpu_total_stream.reset_width(self.width - 35)
 
         if self.has_temps:
-            # cpu total stream height: divide by two and round _up_
-            self.cpu_total_stream.reset_height(-((2 - self.height) // 2))
+            # cpu total stream height: divide by two and round _down_
+            self.cpu_total_stream.reset_height((self.height - 2) // 2)
             #
             self.temp_total_stream.reset_width(self.width - 35)
-            # temp total stream height: divide by two and round _down_
-            self.temp_total_stream.reset_height((self.height - 2) // 2)
+            # temp total stream height: divide by two and round _up_
+            self.temp_total_stream.reset_height(-((2 - self.height) // 2))
         else:
             # full size cpu stream
             self.cpu_total_stream.reset_height(self.height - 2)

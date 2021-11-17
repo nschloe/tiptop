@@ -38,6 +38,7 @@ tiptop uses [Textual](https://github.com/willmcgugan/textual/) for layouting and
 Other top alternatives in alphabetical order:
 
 - [bashtop](https://github.com/aristocratos/bashtop), [bpytop](https://github.com/aristocratos/bpytop), [btop](https://github.com/aristocratos/btop) (which inspired tiptop)
+- [bottom](https://github.com/ClementTsang/bottom)
 - [Glances](https://github.com/nicolargo/glances)
 - [gtop](https://github.com/aksakalli/gtop)
 - [htop](https://github.com/htop-dev/htop)
