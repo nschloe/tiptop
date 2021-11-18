@@ -129,7 +129,13 @@ class CPU(Widget):
 
         # load_avg = os.getloadavg()
         # subtitle = f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
-        subtitle = f"{round(psutil.cpu_freq().current):4d} MHz"
+        try:
+            cpu_freq = psutil.cpu_freq().current
+        except Exception:
+            # https://github.com/nschloe/tiptop/issues/25
+            subtitle = None
+        else:
+            subtitle = f"{round(cpu_freq):4d} MHz"
 
         info_box = Panel(
             "\n".join(lines),
