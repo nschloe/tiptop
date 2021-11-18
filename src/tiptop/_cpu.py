@@ -38,16 +38,16 @@ class CPU(Widget):
 
         # self.max_graph_width = 200
 
-        num_cores = psutil.cpu_count(logical=False)
+        self.num_cores = psutil.cpu_count(logical=False)
         num_threads = psutil.cpu_count(logical=True)
 
         # 8 threads, 4 cores -> [[0, 4], [1, 5], [2, 6], [3, 7]]
-        assert num_threads % num_cores == 0
-        self.core_threads = transpose(list(chunks(range(num_threads), num_cores)))
+        assert num_threads % self.num_cores == 0
+        self.core_threads = transpose(list(chunks(range(num_threads), self.num_cores)))
 
         self.cpu_total_stream = BrailleStream(50, 7, 0.0, 100.0)
 
-        self.cpu_percent_streams = [
+        self.thread_load_streams = [
             BrailleStream(10, 1, 0.0, 100.0)
             for _ in range(num_threads)
             # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
@@ -67,13 +67,14 @@ class CPU(Widget):
                     50, 7, temp_low, temp_high, flipud=True
                 )
                 self.core_temp_streams = [
-                    BrailleStream(5, 1, temp_low, temp_high) for _ in range(num_cores)
+                    BrailleStream(5, 1, temp_low, temp_high)
+                    for _ in range(self.num_cores)
                 ]
 
         self.box_title = ", ".join(
             [
                 f"{num_threads} thread" + ("s" if num_threads > 1 else ""),
-                f"{num_cores} core" + ("s" if num_cores > 1 else ""),
+                f"{self.num_cores} core" + ("s" if self.num_cores > 1 else ""),
             ]
         )
 
@@ -86,7 +87,7 @@ class CPU(Widget):
         #
         load_per_thread = psutil.cpu_percent(percpu=True)
         assert isinstance(load_per_thread, list)
-        for stream, load in zip(self.cpu_percent_streams, load_per_thread):
+        for stream, load in zip(self.thread_load_streams, load_per_thread):
             stream.add_value(load)
 
         # CPU temperatures
@@ -111,24 +112,57 @@ class CPU(Widget):
             lines_temp = lines_temp[:-1] + [lines0]
             cpu_total_graph += "[color(5)]" + "\n".join(lines_temp) + "[/]"
 
-        lines = []
+        # construct right info box
+        info_box, info_box_height = self._construct_info_box(load_per_thread)
+
+        # Manually adjust top margin. Waiting for vertical alignment in Rich.
+        # <https://github.com/willmcgugan/rich/issues/1590>
+        top_margin = (self.height - 2 - info_box_height) // 2
+        info_box = Padding(info_box, (top_margin, 0, 0, 0))
+
+        t = Table(expand=True, show_header=False, padding=0, box=None)
+        # Add ratio 1 to expand that column as much as possible
+        t.add_column("graph", no_wrap=True, ratio=1)
+        t.add_column("box", no_wrap=True, justify="left")
+        t.add_row(cpu_total_graph, info_box)
+
+        self.panel = Panel(
+            t,
+            title=f"cpu - {self.brand_raw}",
+            title_align="left",
+            border_style="color(4)",
+            box=box.SQUARE,
+        )
+
+        # textual method
+        self.refresh()
+
+    def _construct_info_box(self, load_per_thread):
+        thread_load_graphs = []
         for core_id, thread_ids in enumerate(self.core_threads):
-            new_lines = []
             for i in thread_ids:
                 color = val_to_color(load_per_thread[i], 0.0, 100.0)
-                new_lines.append(
+                thread_load_graphs.append(
                     f"[{color}]"
-                    + f"{self.cpu_percent_streams[i].graph[0]} "
-                    + f"{round(self.cpu_percent_streams[i].values[-1]):3d}%"
+                    + f"{self.thread_load_streams[i].graph[0]} "
+                    + f"{round(self.thread_load_streams[i].values[-1]):3d}%"
                     + "[/]"
                 )
-            if self.has_temps:
+        #
+        core_temp_graphs = []
+        if self.has_temps:
+            for core_id in range(self.num_cores):
                 stream = self.core_temp_streams[core_id]
-                temp_minigraph = (
-                    f" [color(5)]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
+                core_temp_graphs.append(
+                    f"[color(5)]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
                 )
-                new_lines[0] += temp_minigraph
-
+        #
+        # merge thread load graphs and core temp graphs into a table structure
+        lines = []
+        for core_id, thread_ids in enumerate(self.core_threads):
+            new_lines = [thread_load_graphs[i] for i in thread_ids]
+            if self.has_temps:
+                new_lines[0] += " " + core_temp_graphs[core_id]
             lines += new_lines
 
         info_box_content = "\n".join(lines)
@@ -151,29 +185,7 @@ class CPU(Widget):
             box=box.SQUARE,
             expand=False,
         )
-
-        # Manually adjust top margin. Waiting for vertical alignment in Rich.
-        # <https://github.com/willmcgugan/rich/issues/1590>
-        info_box_height = len(lines) + 2
-        top_margin = (self.height - 2 - info_box_height) // 2
-        info_box = Padding(info_box, (top_margin, 0, 0, 0))
-
-        t = Table(expand=True, show_header=False, padding=0, box=None)
-        # Add ratio 1 to expand that column as much as possible
-        t.add_column("graph", no_wrap=True, ratio=1)
-        t.add_column("box", no_wrap=True, justify="left")
-        t.add_row(cpu_total_graph, info_box)
-
-        self.panel = Panel(
-            t,
-            title=f"cpu - {self.brand_raw}",
-            title_align="left",
-            border_style="color(4)",
-            box=box.SQUARE,
-        )
-
-        # textual method
-        self.refresh()
+        return info_box, len(lines) + 2
 
     def render(self):
         if self.is_first_render:
