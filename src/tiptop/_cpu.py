@@ -41,11 +41,9 @@ class CPU(Widget):
         num_cores = psutil.cpu_count(logical=False)
         num_threads = psutil.cpu_count(logical=True)
 
-        # 8 threads, 4 cores -> [0, 4, 1, 5, 2, 6, 3, 7]
+        # 8 threads, 4 cores -> [[0, 4], [1, 5], [2, 6], [3, 7]]
         assert num_threads % num_cores == 0
-        self.core_order = flatten(
-            transpose(list(chunks(range(num_threads), num_cores)))
-        )
+        self.core_threads = transpose(list(chunks(range(num_threads), num_cores)))
 
         self.cpu_total_stream = BrailleStream(50, 7, 0.0, 100.0)
 
@@ -114,19 +112,28 @@ class CPU(Widget):
             lines_temp = lines_temp[:-1] + [lines0]
             cpu_total_graph += "[color(5)]" + "\n".join(lines_temp) + "[/]"
 
-        lines = [
-            f"[{cpu_percent_colors[i]}]"
-            + f"{self.cpu_percent_streams[i].graph[0]} "
-            + f"{round(self.cpu_percent_streams[i].values[-1]):3d}%"
-            + "[/]"
-            for i in self.core_order
-        ]
+        table = Table(expand=True, show_header=False, padding=0, box=None)
+        table.add_row("percent")
         if self.has_temps:
-            # add temperature in every other line
-            for k, stream in enumerate(self.core_temp_streams):
-                lines[
-                    2 * k
-                ] += f" [color(5)]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
+            table.add_row("row")
+
+        lines = []
+        for core_id, thread_ids in enumerate(self.core_threads):
+            new_lines = [
+                f"[{cpu_percent_colors[i]}]"
+                + f"{self.cpu_percent_streams[i].graph[0]} "
+                + f"{round(self.cpu_percent_streams[i].values[-1]):3d}%"
+                + "[/]"
+                for i in thread_ids
+            ]
+            if self.has_temps:
+                stream = self.core_temp_streams[core_id]
+                temp_minigraph = (
+                    f" [color(5)]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
+                )
+                new_lines[0] += temp_minigraph
+
+            lines += new_lines
 
         info_box_content = "\n".join(lines)
 
