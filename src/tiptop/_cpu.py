@@ -38,18 +38,16 @@ class CPU(Widget):
 
         # self.max_graph_width = 200
 
-        num_cores = psutil.cpu_count(logical=False)
+        self.num_cores = psutil.cpu_count(logical=False)
         num_threads = psutil.cpu_count(logical=True)
 
-        # 8 threads, 4 cores -> [0, 4, 1, 5, 2, 6, 3, 7]
-        assert num_threads % num_cores == 0
-        self.core_order = flatten(
-            transpose(list(chunks(range(num_threads), num_cores)))
-        )
+        # 8 threads, 4 cores -> [[0, 4], [1, 5], [2, 6], [3, 7]]
+        assert num_threads % self.num_cores == 0
+        self.core_threads = transpose(list(chunks(range(num_threads), self.num_cores)))
 
         self.cpu_total_stream = BrailleStream(50, 7, 0.0, 100.0)
 
-        self.cpu_percent_streams = [
+        self.thread_load_streams = [
             BrailleStream(10, 1, 0.0, 100.0)
             for _ in range(num_threads)
             # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
@@ -69,13 +67,14 @@ class CPU(Widget):
                     50, 7, temp_low, temp_high, flipud=True
                 )
                 self.core_temp_streams = [
-                    BrailleStream(5, 1, temp_low, temp_high) for _ in range(num_cores)
+                    BrailleStream(5, 1, temp_low, temp_high)
+                    for _ in range(self.num_cores)
                 ]
 
         self.box_title = ", ".join(
             [
                 f"{num_threads} thread" + ("s" if num_threads > 1 else ""),
-                f"{num_cores} core" + ("s" if num_cores > 1 else ""),
+                f"{self.num_cores} core" + ("s" if self.num_cores > 1 else ""),
             ]
         )
 
@@ -86,9 +85,9 @@ class CPU(Widget):
         # CPU loads
         self.cpu_total_stream.add_value(psutil.cpu_percent())
         #
-        load_indiv = psutil.cpu_percent(percpu=True)
-        cpu_percent_colors = [val_to_color(val, 0.0, 100.0) for val in load_indiv]
-        for stream, load in zip(self.cpu_percent_streams, load_indiv):
+        load_per_thread = psutil.cpu_percent(percpu=True)
+        assert isinstance(load_per_thread, list)
+        for stream, load in zip(self.thread_load_streams, load_per_thread):
             stream.add_value(load)
 
         # CPU temperatures
@@ -105,7 +104,6 @@ class CPU(Widget):
         lines_cpu = [lines0] + lines_cpu[1:]
         #
         cpu_total_graph = "[color(4)]" + "\n".join(lines_cpu) + "[/]\n"
-
         #
         if self.has_temps:
             lines_temp = self.temp_total_stream.graph
@@ -114,43 +112,11 @@ class CPU(Widget):
             lines_temp = lines_temp[:-1] + [lines0]
             cpu_total_graph += "[color(5)]" + "\n".join(lines_temp) + "[/]"
 
-        lines = [
-            f"[{cpu_percent_colors[i]}]"
-            + f"{self.cpu_percent_streams[i].graph[0]} "
-            + f"{round(self.cpu_percent_streams[i].values[-1]):3d}%[/]"
-            for i in self.core_order
-        ]
-        if self.has_temps:
-            # add temperature in every other line
-            for k, stream in enumerate(self.core_temp_streams):
-                lines[
-                    2 * k
-                ] += f" [color(5)]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
-
-        # load_avg = os.getloadavg()
-        # subtitle = f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
-        try:
-            cpu_freq = psutil.cpu_freq().current
-        except Exception:
-            # https://github.com/nschloe/tiptop/issues/25
-            subtitle = None
-        else:
-            subtitle = f"{round(cpu_freq):4d} MHz"
-
-        info_box = Panel(
-            "\n".join(lines),
-            title=self.box_title,
-            title_align="left",
-            subtitle=subtitle,
-            subtitle_align="left",
-            border_style="color(7)",
-            box=box.SQUARE,
-            expand=False,
-        )
+        # construct right info box
+        info_box, info_box_height = self._construct_info_box(load_per_thread)
 
         # Manually adjust top margin. Waiting for vertical alignment in Rich.
         # <https://github.com/willmcgugan/rich/issues/1590>
-        info_box_height = len(lines) + 2
         top_margin = (self.height - 2 - info_box_height) // 2
         info_box = Padding(info_box, (top_margin, 0, 0, 0))
 
@@ -170,6 +136,56 @@ class CPU(Widget):
 
         # textual method
         self.refresh()
+
+    def _construct_info_box(self, load_per_thread):
+        thread_load_graphs = []
+        for core_id, thread_ids in enumerate(self.core_threads):
+            for i in thread_ids:
+                color = val_to_color(load_per_thread[i], 0.0, 100.0)
+                thread_load_graphs.append(
+                    f"[{color}]"
+                    + f"{self.thread_load_streams[i].graph[0]} "
+                    + f"{round(self.thread_load_streams[i].values[-1]):3d}%"
+                    + "[/]"
+                )
+        #
+        core_temp_graphs = []
+        if self.has_temps:
+            for core_id in range(self.num_cores):
+                stream = self.core_temp_streams[core_id]
+                core_temp_graphs.append(
+                    f"[color(5)]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
+                )
+        #
+        # merge thread load graphs and core temp graphs into a table structure
+        lines = []
+        for core_id, thread_ids in enumerate(self.core_threads):
+            new_lines = [thread_load_graphs[i] for i in thread_ids]
+            if self.has_temps:
+                new_lines[0] += " " + core_temp_graphs[core_id]
+            lines += new_lines
+
+        info_box_content = "\n".join(lines)
+
+        try:
+            cpu_freq = psutil.cpu_freq().current
+        except Exception:
+            # https://github.com/nschloe/tiptop/issues/25
+            subtitle = None
+        else:
+            subtitle = f"{round(cpu_freq):4d} MHz"
+
+        info_box = Panel(
+            info_box_content,
+            title=self.box_title,
+            title_align="left",
+            subtitle=subtitle,
+            subtitle_align="left",
+            border_style="color(7)",
+            box=box.SQUARE,
+            expand=False,
+        )
+        return info_box, len(lines) + 2
 
     def render(self):
         if self.is_first_render:
