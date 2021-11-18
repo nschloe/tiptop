@@ -117,7 +117,8 @@ class CPU(Widget):
         lines = [
             f"[{cpu_percent_colors[i]}]"
             + f"{self.cpu_percent_streams[i].graph[0]} "
-            + f"{round(self.cpu_percent_streams[i].values[-1]):3d}%[/]"
+            + f"{round(self.cpu_percent_streams[i].values[-1]):3d}%"
+            + "[/]"
             for i in self.core_order
         ]
         if self.has_temps:
@@ -127,8 +128,8 @@ class CPU(Widget):
                     2 * k
                 ] += f" [color(5)]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
 
-        # load_avg = os.getloadavg()
-        # subtitle = f"Load Avg:  {load_avg[0]:.2f}  {load_avg[1]:.2f}  {load_avg[2]:.2f}"
+        info_box_content = "\n".join(lines)
+
         try:
             cpu_freq = psutil.cpu_freq().current
         except Exception:
@@ -138,7 +139,7 @@ class CPU(Widget):
             subtitle = f"{round(cpu_freq):4d} MHz"
 
         info_box = Panel(
-            "\n".join(lines),
+            info_box_content,
             title=self.box_title,
             title_align="left",
             subtitle=subtitle,
