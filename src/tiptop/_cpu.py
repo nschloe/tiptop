@@ -84,9 +84,9 @@ class CPU(Widget):
         # CPU loads
         self.cpu_total_stream.add_value(psutil.cpu_percent())
         #
-        load_indiv = psutil.cpu_percent(percpu=True)
-        cpu_percent_colors = [val_to_color(val, 0.0, 100.0) for val in load_indiv]
-        for stream, load in zip(self.cpu_percent_streams, load_indiv):
+        load_per_thread = psutil.cpu_percent(percpu=True)
+        assert isinstance(load_per_thread, list)
+        for stream, load in zip(self.cpu_percent_streams, load_per_thread):
             stream.add_value(load)
 
         # CPU temperatures
@@ -103,7 +103,6 @@ class CPU(Widget):
         lines_cpu = [lines0] + lines_cpu[1:]
         #
         cpu_total_graph = "[color(4)]" + "\n".join(lines_cpu) + "[/]\n"
-
         #
         if self.has_temps:
             lines_temp = self.temp_total_stream.graph
@@ -112,20 +111,17 @@ class CPU(Widget):
             lines_temp = lines_temp[:-1] + [lines0]
             cpu_total_graph += "[color(5)]" + "\n".join(lines_temp) + "[/]"
 
-        table = Table(expand=True, show_header=False, padding=0, box=None)
-        table.add_row("percent")
-        if self.has_temps:
-            table.add_row("row")
-
         lines = []
         for core_id, thread_ids in enumerate(self.core_threads):
-            new_lines = [
-                f"[{cpu_percent_colors[i]}]"
-                + f"{self.cpu_percent_streams[i].graph[0]} "
-                + f"{round(self.cpu_percent_streams[i].values[-1]):3d}%"
-                + "[/]"
-                for i in thread_ids
-            ]
+            new_lines = []
+            for i in thread_ids:
+                color = val_to_color(load_per_thread[i], 0.0, 100.0)
+                new_lines.append(
+                    f"[{color}]"
+                    + f"{self.cpu_percent_streams[i].graph[0]} "
+                    + f"{round(self.cpu_percent_streams[i].values[-1]):3d}%"
+                    + "[/]"
+                )
             if self.has_temps:
                 stream = self.core_temp_streams[core_id]
                 temp_minigraph = (
