@@ -56,11 +56,11 @@ class ProcsList(Widget):
             expand=True,
         )
         table.add_column("pid", min_width=6, no_wrap=True)
-        table.add_column("program", max_width=10, style="color(2)", no_wrap=True)
+        table.add_column("program", max_width=10, style="green", no_wrap=True)
         table.add_column("args", max_width=20, no_wrap=True)
-        table.add_column("thr", width=3, style="color(2)", no_wrap=True)
+        table.add_column("thr", width=3, style="green", no_wrap=True)
         table.add_column("user", no_wrap=True)
-        table.add_column("mem", style="color(2)", no_wrap=True)
+        table.add_column("mem", style="green", no_wrap=True)
         table.add_column("[u]cpu%[/]", width=5, no_wrap=True)
 
         for p in processes[: self.max_num_procs]:
@@ -102,7 +102,7 @@ class ProcsList(Widget):
             title_align="left",
             subtitle=self.tiptop_string,
             subtitle_align="right",
-            border_style="color(6)",
+            border_style="cyan",
             box=box.SQUARE,
         )
 

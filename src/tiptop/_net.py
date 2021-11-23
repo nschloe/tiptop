@@ -102,7 +102,7 @@ class Net(Widget):
             "\n".join(down_box_lines),
             title="▼ down",
             title_align="left",
-            style="color(2)",
+            style="green",
             width=20,
             box=box.SQUARE,
         )
@@ -115,7 +115,7 @@ class Net(Widget):
             "\n".join(up_box_lines),
             title="▲ up",
             title_align="left",
-            style="color(4)",
+            style="blue",
             width=20,
             box=box.SQUARE,
         )
@@ -125,8 +125,8 @@ class Net(Widget):
         t.add_column("graph", no_wrap=True, ratio=1)
         t.add_column("box", no_wrap=True, width=down_box.width)
 
-        t.add_row("[color(2)]" + "\n".join(self.recv_stream.graph) + "[/]", down_box)
-        t.add_row("[color(4)]" + "\n".join(self.sent_stream.graph) + "[/]", up_box)
+        t.add_row("[green]" + "\n".join(self.recv_stream.graph) + "[/]", down_box)
+        t.add_row("[blue]" + "\n".join(self.sent_stream.graph) + "[/]", up_box)
 
         ipv4 = "\n      ".join(ipv4)
         ipv6 = "\n      ".join(ipv6)
@@ -135,7 +135,7 @@ class Net(Widget):
         self.content = Panel(
             g,
             title=f"net - {self.interface}",
-            border_style="color(1)",
+            border_style="red",
             title_align="left",
             box=box.SQUARE,
         )
