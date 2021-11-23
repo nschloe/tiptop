@@ -12,7 +12,7 @@ from .braille_stream import BrailleStream
 def val_to_color(val: float, minval: float, maxval: float) -> str:
     t = (val - minval) / (maxval - minval)
     k = round(t * 3)
-    return {0: "color(4)", 1: "color(6)", 2: "color(6)", 3: "color(2)"}[k]
+    return {0: "blue", 1: "cyan", 2: "cyan", 3: "green"}[k]
 
 
 # https://stackoverflow.com/a/312464/353337
@@ -103,14 +103,14 @@ class CPU(Widget):
         lines0 = lines_cpu[0][: -len(last_val_string)] + last_val_string
         lines_cpu = [lines0] + lines_cpu[1:]
         #
-        cpu_total_graph = "[color(4)]" + "\n".join(lines_cpu) + "[/]\n"
+        cpu_total_graph = "[blue]" + "\n".join(lines_cpu) + "[/]\n"
         #
         if self.has_temps:
             lines_temp = self.temp_total_stream.graph
             last_val_string = f"{round(self.temp_total_stream.values[-1]):3d}°C"
             lines0 = lines_temp[-1][: -len(last_val_string)] + last_val_string
             lines_temp = lines_temp[:-1] + [lines0]
-            cpu_total_graph += "[color(5)]" + "\n".join(lines_temp) + "[/]"
+            cpu_total_graph += "[magenta]" + "\n".join(lines_temp) + "[/]"
 
         # construct right info box
         info_box, info_box_height = self._construct_info_box(load_per_thread)
@@ -130,7 +130,7 @@ class CPU(Widget):
             t,
             title=f"cpu - {self.brand_raw}",
             title_align="left",
-            border_style="color(4)",
+            border_style="blue",
             box=box.SQUARE,
         )
 
@@ -154,7 +154,7 @@ class CPU(Widget):
             for core_id in range(self.num_cores):
                 stream = self.core_temp_streams[core_id]
                 core_temp_graphs.append(
-                    f"[color(5)]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
+                    f"[magenta]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
                 )
         #
         # merge thread load graphs and core temp graphs into a table structure
@@ -181,7 +181,7 @@ class CPU(Widget):
             title_align="left",
             subtitle=subtitle,
             subtitle_align="left",
-            border_style="color(7)",
+            border_style="white",
             box=box.SQUARE,
             expand=False,
         )

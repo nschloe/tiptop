@@ -48,7 +48,7 @@ class InfoLine(Widget):
 
         battery = psutil.sensors_battery()
         if battery is not None:
-            bat_style = "[color(1) reverse bold]" if battery.percent < 15 else ""
+            bat_style = "[red reverse bold]" if battery.percent < 15 else ""
             bat_style_close = "[/]" if battery.percent < 15 else ""
             bat_symbol = "🔌" if battery.power_plugged else "🔋"
             right.append(

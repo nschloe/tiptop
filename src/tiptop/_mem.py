@@ -64,7 +64,7 @@ class Mem(Widget):
             table,
             title=f"mem - {self.mem_total_string}",
             title_align="left",
-            border_style="color(2)",
+            border_style="green",
             box=box.SQUARE,
         )
         self.refresh()
