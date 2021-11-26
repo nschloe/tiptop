@@ -3,7 +3,7 @@
   <p align="center">Command-line system monitoring.</p>
 </p>
 
-[![PyPi Version](https://img.shields.io/pypi/v/tiptop.svg?style=flat-square)](https://pypi.org/project/tiptop)
+[![PyPi Version](https://img.shields.io/pypi/v/tiptop.svg?style=flat-square)](https://pypi.org/project/tiptop/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/tiptop.svg?style=flat-square)](https://pypi.org/project/tiptop/)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/tiptop.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/tiptop)
 [![Downloads](https://pepy.tech/badge/tiptop/month?style=flat-square)](https://pepy.tech/project/tiptop)

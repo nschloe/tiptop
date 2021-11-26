@@ -60,9 +60,10 @@ class CPU(Widget):
         else:
             self.has_temps = "coretemp" in temps
             if self.has_temps:
-                temp_low = 20.0
+                temp_low = 30.0
                 temp_high = temps["coretemp"][0].high
-                assert temp_high is not None
+                if temp_high is None:
+                    temp_high = 100.0
                 self.temp_total_stream = BrailleStream(
                     50, 7, temp_low, temp_high, flipud=True
                 )
