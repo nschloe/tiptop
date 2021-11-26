@@ -53,22 +53,44 @@ class CPU(Widget):
             # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
         ]
 
+        self.tempkey = None
+        self.has_cpu_temp = False
+        self.has_core_temps = False
+
         try:
             temps = psutil.sensors_temperatures()
         except AttributeError:
-            self.has_temps = False
+            pass
         else:
-            self.has_temps = "coretemp" in temps
-            if self.has_temps:
-                temp_low = 20.0
-                temp_high = temps["coretemp"][0].high
-                assert temp_high is not None
+            # coretemp: intel, k10temp: amd
+            # <https://github.com/nschloe/tiptop/issues/37>
+            for key in ["coretemp", "k10temp"]:
+                if key in temps:
+                    self.tempkey = key
+                    self.has_cpu_temp = len(temps[key]) > 0
+                    self.has_core_temps = len(temps[key]) == 1 + self.num_cores
+                    break
+
+            temp_low = 30.0
+
+            if self.has_cpu_temp:
+                assert self.tempkey is not None
                 self.temp_total_stream = BrailleStream(
-                    50, 7, temp_low, temp_high, flipud=True
+                    50, 7, temp_low, temps[self.tempkey][0].high or 100.0, flipud=True
                 )
+
+            if self.has_core_temps:
+                assert self.tempkey is not None
                 self.core_temp_streams = [
-                    BrailleStream(5, 1, temp_low, temp_high)
-                    for _ in range(self.num_cores)
+                    BrailleStream(
+                        5,
+                        1,
+                        temp_low,
+                        temps[self.tempkey][k + 1].high
+                        or temps[self.tempkey][0].high
+                        or 100.0,
+                    )
+                    for k in range(self.num_cores)
                 ]
 
         self.box_title = ", ".join(
@@ -91,11 +113,14 @@ class CPU(Widget):
             stream.add_value(load)
 
         # CPU temperatures
-        if self.has_temps:
-            coretemps = psutil.sensors_temperatures()["coretemp"]
-            self.temp_total_stream.add_value(coretemps[0].current)
-            #
-            for stream, temp in zip(self.core_temp_streams, coretemps[1:]):
+        temps = psutil.sensors_temperatures()
+        if self.has_cpu_temp:
+            assert self.tempkey is not None
+            self.temp_total_stream.add_value(temps[self.tempkey][0].current)
+
+        if self.has_core_temps:
+            assert self.tempkey is not None
+            for stream, temp in zip(self.core_temp_streams, temps[self.tempkey][1:]):
                 stream.add_value(temp.current)
 
         lines_cpu = self.cpu_total_stream.graph
@@ -105,7 +130,7 @@ class CPU(Widget):
         #
         cpu_total_graph = "[blue]" + "\n".join(lines_cpu) + "[/]\n"
         #
-        if self.has_temps:
+        if self.has_cpu_temp:
             lines_temp = self.temp_total_stream.graph
             last_val_string = f"{round(self.temp_total_stream.values[-1]):3d}°C"
             lines0 = lines_temp[-1][: -len(last_val_string)] + last_val_string
@@ -150,7 +175,7 @@ class CPU(Widget):
                 )
         #
         core_temp_graphs = []
-        if self.has_temps:
+        if self.has_core_temps:
             for core_id in range(self.num_cores):
                 stream = self.core_temp_streams[core_id]
                 core_temp_graphs.append(
@@ -161,7 +186,7 @@ class CPU(Widget):
         lines = []
         for core_id, thread_ids in enumerate(self.core_threads):
             new_lines = [thread_load_graphs[i] for i in thread_ids]
-            if self.has_temps:
+            if self.has_core_temps:
                 new_lines[0] += " " + core_temp_graphs[core_id]
             lines += new_lines
 
@@ -199,7 +224,7 @@ class CPU(Widget):
 
         self.cpu_total_stream.reset_width(self.width - 35)
 
-        if self.has_temps:
+        if self.has_cpu_temp:
             # cpu total stream height: divide by two and round _down_
             self.cpu_total_stream.reset_height((self.height - 2) // 2)
             #
