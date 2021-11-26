@@ -59,4 +59,4 @@ def run():
         async def on_load(self, _):
             await self.bind("q", "quit", "quit")
 
-    TiptopApp.run()
+    TiptopApp.run(log="textual.log")
