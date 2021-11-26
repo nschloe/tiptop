@@ -181,8 +181,10 @@ class CPU(Widget):
                 )
             if self.has_core_temps:
                 stream = self.core_temp_streams[core_id]
+                val = stream.values[-1]
+                color = "magenta" if val < 70.0 else "red"
                 line.append(
-                    f"[magenta]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
+                    f"[{color}]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
                 )
 
             lines.append(" ".join(line))
