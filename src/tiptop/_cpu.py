@@ -4,6 +4,7 @@ from rich import box
 from rich.padding import Padding
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 from textual.widget import Widget
 
 from .braille_stream import BrailleStream
@@ -35,6 +36,8 @@ class CPU(Widget):
         self.is_first_render = True
         self.width = 0
         self.height = 0
+
+        self.info_box_width = 0
 
         # self.max_graph_width = 200
 
@@ -95,8 +98,8 @@ class CPU(Widget):
 
         self.box_title = ", ".join(
             [
-                f"{num_threads} thread" + ("s" if num_threads > 1 else ""),
                 f"{self.num_cores} core" + ("s" if self.num_cores > 1 else ""),
+                f"{num_threads} thread" + ("s" if num_threads > 1 else ""),
             ]
         )
 
@@ -138,7 +141,9 @@ class CPU(Widget):
             cpu_total_graph += "[magenta]" + "\n".join(lines_temp) + "[/]"
 
         # construct right info box
-        info_box, info_box_height = self._construct_info_box(load_per_thread)
+        info_box, info_box_height, self.info_box_width = self._construct_info_box(
+            load_per_thread
+        )
 
         # Manually adjust top margin. Waiting for vertical alignment in Rich.
         # <https://github.com/willmcgugan/rich/issues/1590>
@@ -163,32 +168,26 @@ class CPU(Widget):
         self.refresh()
 
     def _construct_info_box(self, load_per_thread):
-        thread_load_graphs = []
+        lines = []
         for core_id, thread_ids in enumerate(self.core_threads):
+            line = []
             for i in thread_ids:
                 color = val_to_color(load_per_thread[i], 0.0, 100.0)
-                thread_load_graphs.append(
+                line.append(
                     f"[{color}]"
-                    + f"{self.thread_load_streams[i].graph[0]} "
+                    + f"{self.thread_load_streams[i].graph[0]}"
                     + f"{round(self.thread_load_streams[i].values[-1]):3d}%"
                     + "[/]"
                 )
-        #
-        core_temp_graphs = []
-        if self.has_core_temps:
-            for core_id in range(self.num_cores):
-                stream = self.core_temp_streams[core_id]
-                core_temp_graphs.append(
-                    f"[magenta]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
-                )
-        #
-        # merge thread load graphs and core temp graphs into a table structure
-        lines = []
-        for core_id, thread_ids in enumerate(self.core_threads):
-            new_lines = [thread_load_graphs[i] for i in thread_ids]
             if self.has_core_temps:
-                new_lines[0] += " " + core_temp_graphs[core_id]
-            lines += new_lines
+                stream = self.core_temp_streams[core_id]
+                val = stream.values[-1]
+                color = "magenta" if val < 70.0 else "red"
+                line.append(
+                    f"[{color}]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
+                )
+
+            lines.append(" ".join(line))
 
         info_box_content = "\n".join(lines)
 
@@ -210,7 +209,11 @@ class CPU(Widget):
             box=box.SQUARE,
             expand=False,
         )
-        return info_box, len(lines) + 2
+
+        height = len(lines) + 2
+        # https://github.com/willmcgugan/rich/discussions/1559#discussioncomment-1459008
+        width = 4 + len(Text.from_markup(lines[0]))
+        return info_box, height, width
 
     def render(self):
         if self.is_first_render:
@@ -222,13 +225,13 @@ class CPU(Widget):
         self.width = event.width
         self.height = event.height
 
-        self.cpu_total_stream.reset_width(self.width - 35)
+        self.cpu_total_stream.reset_width(self.width - self.info_box_width - 5)
 
         if self.has_cpu_temp:
             # cpu total stream height: divide by two and round _down_
             self.cpu_total_stream.reset_height((self.height - 2) // 2)
             #
-            self.temp_total_stream.reset_width(self.width - 35)
+            self.temp_total_stream.reset_width(self.width - self.info_box_width - 5)
             # temp total stream height: divide by two and round _up_
             self.temp_total_stream.reset_height(-((2 - self.height) // 2))
         else:
