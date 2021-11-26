@@ -53,32 +53,41 @@ class CPU(Widget):
             # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
         ]
 
+        self.tempkey = None
+        self.has_cpu_temp = False
+        self.has_core_temps = False
+
         try:
             temps = psutil.sensors_temperatures()
         except AttributeError:
-            self.has_cpu_temp = False
-            self.has_core_temps = False
+            pass
         else:
-            self.has_cpu_temp = "coretemp" in temps and len(temps["coretemp"]) > 0
-            self.has_core_temps = (
-                "coretemp" in temps and len(temps["coretemp"]) == 1 + self.num_cores
-            )
+            # coretemp: intel, k10temp: amd
+            # <https://github.com/nschloe/tiptop/issues/37>
+            for key in ["coretemp", "k10temp"]:
+                if key in temps:
+                    self.tempkey = key
+                    self.has_cpu_temp = len(temps[key]) > 0
+                    self.has_core_temps = len(temps[key]) == 1 + self.num_cores
+                    break
 
             temp_low = 30.0
 
             if self.has_cpu_temp:
+                assert self.tempkey is not None
                 self.temp_total_stream = BrailleStream(
-                    50, 7, temp_low, temps["coretemp"][0].high or 100.0, flipud=True
+                    50, 7, temp_low, temps[self.tempkey][0].high or 100.0, flipud=True
                 )
 
             if self.has_core_temps:
+                assert self.tempkey is not None
                 self.core_temp_streams = [
                     BrailleStream(
                         5,
                         1,
                         temp_low,
-                        temps["coretemp"][k + 1].high
-                        or temps["coretemp"][0].high
+                        temps[self.tempkey][k + 1].high
+                        or temps[self.tempkey][0].high
                         or 100.0,
                     )
                     for k in range(self.num_cores)
@@ -106,12 +115,12 @@ class CPU(Widget):
         # CPU temperatures
         temps = psutil.sensors_temperatures()
         if self.has_cpu_temp:
-            coretemps = temps["coretemp"]
-            self.temp_total_stream.add_value(coretemps[0].current)
+            assert self.tempkey is not None
+            self.temp_total_stream.add_value(temps[self.tempkey][0].current)
 
         if self.has_core_temps:
-            coretemps = temps["coretemp"]
-            for stream, temp in zip(self.core_temp_streams, coretemps[1:]):
+            assert self.tempkey is not None
+            for stream, temp in zip(self.core_temp_streams, temps[self.tempkey][1:]):
                 stream.add_value(temp.current)
 
         lines_cpu = self.cpu_total_stream.graph
