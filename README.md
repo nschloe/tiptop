@@ -15,7 +15,6 @@
 [![Coffee](https://img.shields.io/badge/-Buy%20me%20a%20Coffee-grey?logo=Ko-fi&style=flat-square)](https://ko-fi.com/nschloe)
 
 [![gh-actions](https://img.shields.io/github/workflow/status/nschloe/tiptop/ci?style=flat-square)](https://github.com/nschloe/tiptop/actions?query=workflow%3Aci)
-[![codecov](https://img.shields.io/codecov/c/github/nschloe/tiptop.svg?style=flat-square)](https://app.codecov.io/gh/nschloe/tiptop)
 [![LGTM](https://img.shields.io/lgtm/grade/python/github/nschloe/tiptop.svg?style=flat-square)](https://lgtm.com/projects/g/nschloe/tiptop)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 

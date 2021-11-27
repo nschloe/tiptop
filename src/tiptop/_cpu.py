@@ -116,15 +116,20 @@ class CPU(Widget):
             stream.add_value(load)
 
         # CPU temperatures
-        temps = psutil.sensors_temperatures()
-        if self.has_cpu_temp:
-            assert self.tempkey is not None
-            self.temp_total_stream.add_value(temps[self.tempkey][0].current)
 
-        if self.has_core_temps:
-            assert self.tempkey is not None
-            for stream, temp in zip(self.core_temp_streams, temps[self.tempkey][1:]):
-                stream.add_value(temp.current)
+        if self.has_cpu_temp or self.has_core_temps:
+            temps = psutil.sensors_temperatures()
+
+            if self.has_cpu_temp:
+                assert self.tempkey is not None
+                self.temp_total_stream.add_value(temps[self.tempkey][0].current)
+
+            if self.has_core_temps:
+                assert self.tempkey is not None
+                for stream, temp in zip(
+                    self.core_temp_streams, temps[self.tempkey][1:]
+                ):
+                    stream.add_value(temp.current)
 
         lines_cpu = self.cpu_total_stream.graph
         last_val_string = f"{self.cpu_total_stream.values[-1]:5.1f}%"
