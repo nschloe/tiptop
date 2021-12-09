@@ -7,6 +7,7 @@
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/tiptop.svg?style=flat-square)](https://pypi.org/project/tiptop/)
 [![GitHub stars](https://img.shields.io/github/stars/nschloe/tiptop.svg?style=flat-square&logo=github&label=Stars&logoColor=white)](https://github.com/nschloe/tiptop)
 [![Downloads](https://pepy.tech/badge/tiptop/month?style=flat-square)](https://pepy.tech/project/tiptop)
+
 <!--[![PyPi downloads](https://img.shields.io/pypi/dm/tiptop.svg?style=flat-square)](https://pypistats.org/packages/tiptop)-->
 
 [![Discord](https://img.shields.io/static/v1?logo=discord&label=chat&message=on%20discord&color=7289da&style=flat-square)](https://discord.gg/Z6DMsJh4Hr)
@@ -19,11 +20,14 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/psf/black)
 
 tiptop is a command-line system monitoring tool in the spirit of
-[top](https://en.wikipedia.org/wiki/Top_(software)). It displays various
+[top](<https://en.wikipedia.org/wiki/Top_(software)>). It displays various
 interesting system stats, graphs it, and works on Linux and macOS.
 
 Install and run with
-```
+
+<!--pytest-codeblocks: skip-->
+
+```sh
 pip install tiptop
 tiptop
 ```
@@ -31,6 +35,25 @@ tiptop
 <p align="center">
 <img alt="screenshot" src="https://raw.githubusercontent.com/nschloe/tiptop/gh-pages/screenshot.png" width="100%"/>
 </p>
+
+For all options, see
+
+```sh
+tiptop -h
+```
+
+<!--pytest-codeblocks: expected-output-->
+
+```
+usage: tiptop [-h] [--version] [--net NET]
+
+Command-line system monitor.
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --version, -v      display version information
+  --net NET, -n NET  network interface to display (default: auto)
+```
 
 tiptop uses [Textual](https://github.com/willmcgugan/textual/) for layouting and [psutil](https://github.com/giampaolo/psutil) for fetching system data.
 

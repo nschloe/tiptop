@@ -36,7 +36,7 @@ from ._procs_list import ProcsList
 
 def run(argv=None):
     parser = argparse.ArgumentParser(
-        description="Command-line system monitor",
+        description="Command-line system monitor.",
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
