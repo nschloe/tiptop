@@ -1,3 +1,14 @@
+from __future__ import annotations
+
+import argparse
+from sys import version_info
+
+try:
+    # Python 3.8+
+    from importlib import metadata
+except ImportError:
+    import importlib_metadata as metadata
+
 from textual.app import App
 
 from ._cpu import CPU
@@ -6,23 +17,46 @@ from ._mem import Mem
 from ._net import Net
 from ._procs_list import ProcsList
 
+# class TiptopApp(App):
+#     async def on_mount(self) -> None:
+#         await self.view.dock(InfoLine(), edge="top", size=1, name="info")
+#         await self.view.dock(CPU(), edge="top", size=14, name="cpu")
+#         await self.view.dock(ProcsList(), edge="right", size=70, name="proc")
+#         await self.view.dock(Mem(), edge="top", size=20, name="mem")
+#         await self.view.dock(Net(), edge="bottom", name="net")
+#
+#     async def on_load(self, _):
+#         await self.bind("i", "view.toggle('info')", "Toggle info")
+#         await self.bind("c", "view.toggle('cpu')", "Toggle cpu")
+#         await self.bind("m", "view.toggle('mem')", "Toggle mem")
+#         await self.bind("n", "view.toggle('net')", "Toggle net")
+#         await self.bind("p", "view.toggle('proc')", "Toggle proc")
+#         await self.bind("q", "quit", "quit")
 
-def run():
-    # class TiptopApp(App):
-    #     async def on_mount(self) -> None:
-    #         await self.view.dock(InfoLine(), edge="top", size=1, name="info")
-    #         await self.view.dock(CPU(), edge="top", size=14, name="cpu")
-    #         await self.view.dock(ProcsList(), edge="right", size=70, name="proc")
-    #         await self.view.dock(Mem(), edge="top", size=20, name="mem")
-    #         await self.view.dock(Net(), edge="bottom", name="net")
-    #
-    #     async def on_load(self, _):
-    #         await self.bind("i", "view.toggle('info')", "Toggle info")
-    #         await self.bind("c", "view.toggle('cpu')", "Toggle cpu")
-    #         await self.bind("m", "view.toggle('mem')", "Toggle mem")
-    #         await self.bind("n", "view.toggle('net')", "Toggle net")
-    #         await self.bind("p", "view.toggle('proc')", "Toggle proc")
-    #         await self.bind("q", "quit", "quit")
+
+def run(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Command-line system monitor.",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    parser.add_argument(
+        "--version",
+        "-v",
+        action="version",
+        version=_get_version_text(),
+        help="display version information",
+    )
+
+    parser.add_argument(
+        "--net",
+        "-n",
+        type=str,
+        default=None,
+        help="network interface to display (default: auto)",
+    )
+
+    args = parser.parse_args(argv)
 
     # with a grid
     class TiptopApp(App):
@@ -52,7 +86,7 @@ def run():
                 area0=InfoLine(),
                 area1=CPU(),
                 area2=Mem(),
-                area3=Net(),
+                area3=Net(args.net),
                 area4=ProcsList(),
             )
 
@@ -60,3 +94,19 @@ def run():
             await self.bind("q", "quit", "quit")
 
     TiptopApp.run(log="textual.log")
+
+
+def _get_version_text():
+    python_version = f"{version_info.major}.{version_info.minor}.{version_info.micro}"
+
+    try:
+        __version__ = metadata.version("tiptop")
+    except metadata.PackageNotFoundError:
+        __version__ = ""
+
+    return "\n".join(
+        [
+            f"tiptop {__version__} [Python {python_version}]",
+            "Copyright (c) 2021 Nico Schlömer",
+        ]
+    )

@@ -23,7 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        # Can't check on Python 3.10 yet as it has a different output on tiptop -h
+        # https://docs.python.org/3/whatsnew/3.10.html#argparse
+        python-version: ["3.7", "3.8", "3.9"]
     steps:
       - uses: actions/setup-python@v2
         with:
@@ -32,7 +34,7 @@ jobs:
       - name: Test with tox
         run: |
           pip install tox
-          tox -- --cov pyfoobar --cov-report xml --cov-report term
+          tox
       - name: Submit to codecov
         uses: codecov/codecov-action@v1
         if: ${{ matrix.python-version == '3.9' }}

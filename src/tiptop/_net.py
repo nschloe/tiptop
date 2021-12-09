@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import socket
 
 import psutil
@@ -12,25 +14,31 @@ from .braille_stream import BrailleStream
 
 
 class Net(Widget):
+    def __init__(self, interface: str | None = None):
+        if interface is None:
+            # try to find non-lo and non-docker interface that is up
+            stats = psutil.net_if_stats()
+            score_dict = {}
+            for name, stats in stats.items():
+                if not stats.isup:
+                    score_dict[name] = 0
+                    continue
+
+                if name.startswith("lo") or name.startswith("docker"):
+                    score_dict[name] = 1
+                    continue
+
+                score_dict[name] = 2
+
+            # Get key with max score
+            # https://stackoverflow.com/a/280156/353337
+            self.interface = max(score_dict, key=score_dict.get)
+        else:
+            self.interface = interface
+
+        super().__init__()
+
     def on_mount(self):
-        # try to find non-lo and non-docker interface that is up
-        stats = psutil.net_if_stats()
-        score_dict = {}
-        for name, stats in stats.items():
-            if not stats.isup:
-                score_dict[name] = 0
-                continue
-
-            if name.startswith("lo") or name.startswith("docker"):
-                score_dict[name] = 1
-                continue
-
-            score_dict[name] = 2
-
-        # Get key with max score
-        # https://stackoverflow.com/a/280156/353337
-        self.interface = max(score_dict, key=score_dict.get)
-
         self.last_net = None
         self.max_recv_bytes_s = 0
         self.max_recv_bytes_s_str = ""
