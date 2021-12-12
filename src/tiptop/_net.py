@@ -22,13 +22,14 @@ class Net(Widget):
             for name, stats in stats.items():
                 if not stats.isup:
                     score_dict[name] = 0
-                    continue
-
-                if name.startswith("lo") or name.startswith("docker"):
+                elif name.startswith("lo") or name.startswith("docker"):
+                    # local or docker
                     score_dict[name] = 1
-                    continue
-
-                score_dict[name] = 2
+                elif name.startswith("fw"):
+                    # firewire https://github.com/nschloe/tiptop/issues/45#issuecomment-991884364
+                    score_dict[name] = 2
+                else:
+                    score_dict[name] = 3
 
             # Get key with max score
             # https://stackoverflow.com/a/280156/353337

@@ -10,7 +10,7 @@
 
 <!--[![PyPi downloads](https://img.shields.io/pypi/dm/tiptop.svg?style=flat-square)](https://pypistats.org/packages/tiptop)-->
 
-[![Discord](https://img.shields.io/static/v1?logo=discord&label=chat&message=on%20discord&color=7289da&style=flat-square)](https://discord.gg/Z6DMsJh4Hr)
+[![Discord](https://img.shields.io/static/v1?logo=discord&logoColor=white&label=chat&message=on%20discord&color=7289da&style=flat-square)](https://discord.gg/Z6DMsJh4Hr)
 [![Donate](https://img.shields.io/badge/-Donate-yellow?logo=paypal&style=flat-square)](https://paypal.me/nschloe)
 [![Sponsor](https://img.shields.io/badge/-Sponsor-red?logo=github&style=flat-square)](https://github.com/sponsors/nschloe)
 [![Coffee](https://img.shields.io/badge/-Buy%20me%20a%20Coffee-grey?logo=Ko-fi&style=flat-square)](https://ko-fi.com/nschloe)
