@@ -38,6 +38,8 @@ tiptop
 
 For all options, see
 
+<!--pytest-codeblocks:skipif(sys.version_info < (3, 10))-->
+
 ```sh
 tiptop -h
 ```
@@ -49,7 +51,7 @@ usage: tiptop [-h] [--version] [--net NET]
 
 Command-line system monitor.
 
-optional arguments:
+options:
   -h, --help         show this help message and exit
   --version, -v      display version information
   --net NET, -n NET  network interface to display (default: auto)

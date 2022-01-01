@@ -20,12 +20,11 @@ jobs:
         uses: pre-commit/action@v2.0.3
 
   build:
+    needs: [lint]
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Can't check on Python 3.10 yet as it has a different output on tiptop -h
-        # https://docs.python.org/3/whatsnew/3.10.html#argparse
-        python-version: ["3.7", "3.8", "3.9"]
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
     steps:
       - uses: actions/setup-python@v2
         with:
