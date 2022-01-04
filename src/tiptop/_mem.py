@@ -18,7 +18,8 @@ class Mem(Widget):
         # check which mem sections are available on the machine
         self.attrs = []
         mem = psutil.virtual_memory()
-        for attr in ["used", "available", "cached", "free"]:
+        self.colors = ["yellow", "green", "blue", "magenta"]
+        for attr in ["free", "available", "cached", "used"]:
             if hasattr(mem, attr):
                 self.attrs.append(attr)
 
@@ -58,7 +59,7 @@ class Mem(Widget):
         table = Table(box=None, expand=True, padding=0, show_header=False)
         table.add_column(justify="left", no_wrap=True)
         for k, graph in enumerate(graphs):
-            table.add_row(f"[color({k + 2})]{graph}[/]")
+            table.add_row(f"[{self.colors[k]}]{graph}[/]")
 
         self.panel = Panel(
             table,
