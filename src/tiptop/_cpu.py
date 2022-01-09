@@ -1,7 +1,6 @@
 import cpuinfo
 import psutil
 from rich import box
-from rich.padding import Padding
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -146,19 +145,12 @@ class CPU(Widget):
             cpu_total_graph += "[magenta]" + "\n".join(lines_temp) + "[/]"
 
         # construct right info box
-        info_box, info_box_height, self.info_box_width = self._construct_info_box(
-            load_per_thread
-        )
-
-        # Manually adjust top margin. Waiting for vertical alignment in Rich.
-        # <https://github.com/willmcgugan/rich/issues/1590>
-        top_margin = (self.height - 2 - info_box_height) // 2
-        info_box = Padding(info_box, (top_margin, 0, 0, 0))
+        info_box, self.info_box_width = self._construct_info_box(load_per_thread)
 
         t = Table(expand=True, show_header=False, padding=0, box=None)
         # Add ratio 1 to expand that column as much as possible
         t.add_column("graph", no_wrap=True, ratio=1)
-        t.add_column("box", no_wrap=True, justify="left")
+        t.add_column("box", no_wrap=True, justify="left", vertical="middle")
         t.add_row(cpu_total_graph, info_box)
 
         self.panel = Panel(
@@ -215,10 +207,9 @@ class CPU(Widget):
             expand=False,
         )
 
-        height = len(lines) + 2
         # https://github.com/willmcgugan/rich/discussions/1559#discussioncomment-1459008
         width = 4 + len(Text.from_markup(lines[0]))
-        return info_box, height, width
+        return info_box, width
 
     def render(self):
         if self.is_first_render:
