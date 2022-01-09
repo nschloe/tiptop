@@ -145,9 +145,7 @@ class CPU(Widget):
             cpu_total_graph += "[magenta]" + "\n".join(lines_temp) + "[/]"
 
         # construct right info box
-        info_box, info_box_height, self.info_box_width = self._construct_info_box(
-            load_per_thread
-        )
+        info_box, self.info_box_width = self._construct_info_box(load_per_thread)
 
         t = Table(expand=True, show_header=False, padding=0, box=None)
         # Add ratio 1 to expand that column as much as possible
@@ -209,10 +207,9 @@ class CPU(Widget):
             expand=False,
         )
 
-        height = len(lines) + 2
         # https://github.com/willmcgugan/rich/discussions/1559#discussioncomment-1459008
         width = 4 + len(Text.from_markup(lines[0]))
-        return info_box, height, width
+        return info_box, width
 
     def render(self):
         if self.is_first_render:
