@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
 
 [tool.isort]
 profile = "black"
@@ -40,4 +40,4 @@ Issues = "https://github.com/nschloe/tiptop/issues"
 Funding = "https://github.com/sponsors/nschloe"
 
 [project.scripts]
-fontman = "tiptop._app:run"
+tiptop = "tiptop._app:run"
