@@ -1,6 +1,43 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
 
 [tool.isort]
 profile = "black"
+
+[project]
+name = "tiptop"
+authors = [{name = "Nico Schlömer", email = "nico.schloemer@gmail.com"}]
+description = "A better top"
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Utilities",
+]
+dynamic = ["version"]
+requires-python = ">=3.7"
+dependencies = [
+   "py-cpuinfo",
+   "distro",
+   "psutil",
+   "rich >= 11.0.0",
+   "textual >=0.1.14, <0.2",
+]
+
+[project.urls]
+Code = "https://github.com/nschloe/tiptop"
+Issues = "https://github.com/nschloe/tiptop/issues"
+Funding = "https://github.com/sponsors/nschloe"
+
+[project.scripts]
+tiptop = "tiptop._app:run"
