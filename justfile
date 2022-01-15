@@ -5,7 +5,7 @@ default:
 
 publish:
 	@if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then exit 1; fi
-	gh release create "v{version}"
+	gh release create "v{{version}}"
 	flit publish
 
 clean:
