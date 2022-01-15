@@ -3,14 +3,9 @@ from __future__ import annotations
 import argparse
 from sys import version_info
 
-try:
-    # Python 3.8+
-    from importlib import metadata
-except ImportError:
-    import importlib_metadata as metadata
-
 from textual.app import App
 
+from .__about__ import __version__
 from ._cpu import CPU
 from ._info import InfoLine
 from ._mem import Mem
@@ -99,14 +94,9 @@ def run(argv=None):
 def _get_version_text():
     python_version = f"{version_info.major}.{version_info.minor}.{version_info.micro}"
 
-    try:
-        __version__ = metadata.version("tiptop")
-    except metadata.PackageNotFoundError:
-        __version__ = ""
-
     return "\n".join(
         [
             f"tiptop {__version__} [Python {python_version}]",
-            "Copyright (c) 2021 Nico Schlömer",
+            "Copyright (c) 2021-2022 Nico Schlömer",
         ]
     )
