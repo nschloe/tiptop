@@ -10,7 +10,8 @@ class Battery(Widget):
     def on_mount(self):
         self.is_first_render = True
         self.bat_stream = BrailleStream(40, 4, 0.0, 100.0)
-        self.set_interval(10.0, self.collect_data)
+        # update frequency: 1 min
+        self.set_interval(60.0, self.collect_data)
 
     def collect_data(self):
         bat = psutil.sensors_battery()
