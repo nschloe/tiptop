@@ -21,7 +21,7 @@ class Battery(Widget):
         battery_graph = "[yellow]" + "\n".join(self.bat_stream.graph) + "[/]\n"
 
         if bat.power_plugged:
-            title = "charging"
+            status = "charging"
         else:
             mm = bat.secsleft // 60
             hh, mm = divmod(mm, 60)
@@ -30,13 +30,11 @@ class Battery(Widget):
                 time_left_str.append(f"{hh}h")
             if mm > 0:
                 time_left_str.append(f"{mm}min")
-            time_left_str = " ".join(time_left_str)
-            title = f"{time_left_str} left"
+            status = " ".join(time_left_str) + " left"
 
-        bat_style = "[red reverse bold]" if bat.percent < 15 else ""
-        bat_style_close = "[/]" if bat.percent < 15 else ""
-        last_val_string = f"{self.bat_stream.values[-1]:.1f}%"
-        title = f"{bat_style}battery - {last_val_string} - {title}{bat_style_close}"
+        title = f"battery - {self.bat_stream.values[-1]:.1f}% - {status}"
+        if bat.percent < 15 and not bat.power_plugged:
+            title = "[red reverse bold]" + title + "[/]"
 
         self.panel = Panel(
             battery_graph,
