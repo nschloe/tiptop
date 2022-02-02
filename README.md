@@ -21,7 +21,7 @@
 
 tiptop is a command-line system monitoring tool in the spirit of
 [top](<https://en.wikipedia.org/wiki/Top_(software)>). It displays various
-interesting system stats, graphs it, and works on Linux and macOS.
+interesting system stats and graphs them. Works on all operating systems.
 
 Install and run with
 
