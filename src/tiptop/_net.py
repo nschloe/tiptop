@@ -13,34 +13,36 @@ from ._helpers import sizeof_fmt
 from .braille_stream import BrailleStream
 
 
+def _autoselect_interface():
+    """try to find non-lo and non-docker interface that is up"""
+    stats = psutil.net_if_stats()
+    score_dict = {}
+    for name, stats in stats.items():
+        if not stats.isup:
+            score_dict[name] = 0
+        elif (
+            # On Unix, we have `lo`, on Windows `Loopback Pseudo-Interface k`
+            # and `Local Area Connection k` (the latter is valid)
+            name.startswith("lo")
+            or name.lower().startswith("loopback")
+            or name.lower().startswith("docker")
+        ):
+            score_dict[name] = 1
+        elif name.lower().startswith("fw") or name.lower().startswith("Bluetooth"):
+            # firewire <https://github.com/nschloe/tiptop/issues/45#issuecomment-991884364>
+            # or bluetooth
+            score_dict[name] = 2
+        else:
+            score_dict[name] = 3
+
+    # Get key with max score
+    # https://stackoverflow.com/a/280156/353337
+    return max(score_dict, key=score_dict.get)
+
+
 class Net(Widget):
     def __init__(self, interface: str | None = None):
-        if interface is None:
-            # try to find non-lo and non-docker interface that is up
-            stats = psutil.net_if_stats()
-            score_dict = {}
-            for name, stats in stats.items():
-                if not stats.isup:
-                    score_dict[name] = 0
-                elif (
-                    # On Unix, we have `lo`, on Windows `Loopback Pseudo-Interface`
-                    name.lower().startswith("lo")
-                    or name.lower().startswith("docker")
-                ):
-                    score_dict[name] = 1
-                elif name.lower().startswith("fw"):
-                    # firewire
-                    # https://github.com/nschloe/tiptop/issues/45#issuecomment-991884364
-                    score_dict[name] = 2
-                else:
-                    score_dict[name] = 3
-
-            # Get key with max score
-            # https://stackoverflow.com/a/280156/353337
-            self.interface = max(score_dict, key=score_dict.get)
-        else:
-            self.interface = interface
-
+        self.interface = _autoselect_interface() if interface is None else interface
         super().__init__()
 
     def on_mount(self):
