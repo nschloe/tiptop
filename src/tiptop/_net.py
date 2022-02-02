@@ -22,11 +22,15 @@ class Net(Widget):
             for name, stats in stats.items():
                 if not stats.isup:
                     score_dict[name] = 0
-                elif name.startswith("lo") or name.startswith("docker"):
-                    # local or docker
+                elif (
+                    # On Unix, we have `lo`, on Windows `Loopback Pseudo-Interface`
+                    name.lower().startswith("lo")
+                    or name.lower().startswith("docker")
+                ):
                     score_dict[name] = 1
-                elif name.startswith("fw"):
-                    # firewire https://github.com/nschloe/tiptop/issues/45#issuecomment-991884364
+                elif name.lower().startswith("fw"):
+                    # firewire
+                    # https://github.com/nschloe/tiptop/issues/45#issuecomment-991884364
                     score_dict[name] = 2
                 else:
                     score_dict[name] = 3

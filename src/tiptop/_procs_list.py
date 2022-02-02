@@ -16,18 +16,29 @@ class ProcsList(Widget):
         self.set_interval(6.0, self.collect_data)
 
     def collect_data(self):
-        attrs = [
-            "pid",
-            "name",
-            "username",
-            "cmdline",
-            "cpu_percent",
-            "num_threads",
-            "memory_info",
-            "status",
-        ]
+        processes = list(
+            psutil.process_iter(
+                [
+                    "pid",
+                    "name",
+                    "username",
+                    "cmdline",
+                    "cpu_percent",
+                    "num_threads",
+                    "memory_info",
+                    "status",
+                ]
+            )
+        )
+
+        if processes[0].pid == 0:
+            # Remove process with PID 0. On Windows, that's SYSTEM IDLE, and we
+            # don't want that to appear at the top of the list.
+            # <https://twitter.com/andre_roberge/status/1488885893716975622/photo/1>
+            processes = processes[1:]
+
         processes = sorted(
-            psutil.process_iter(attrs),
+            processes,
             # The item.info["cpu_percent"] can be `ad_value` (default None).
             # It gets assigned to a dict key in case AccessDenied or
             # ZombieProcess exception is raised when retrieving that particular
