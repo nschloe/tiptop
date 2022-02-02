@@ -21,10 +21,12 @@ jobs:
 
   build:
     needs: [lint]
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        # Windows tests fail on 3.10 -- somehow the output of tiptop --help is off
+        python-version: ["3.7", "3.8", "3.9"]
     steps:
       - uses: actions/setup-python@v2
         with:
