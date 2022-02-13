@@ -105,8 +105,12 @@ class CPU(Widget):
         else:
             self.has_fan_rpm = True
             fan_low = 0
-            fan_high = list(self.fan_rpm.values())[0][0].current
-            fan_high = max(fan_high, 1)
+            fan_current = list(self.fan_rpm.values())[0][0].current
+            # Sometimes, psutil/computers will falsely report a fan speed of
+            # 65535 which is 2 ** 16 - 1; dismiss that.
+            if fan_current == 65535:
+                fan_current = 1
+            fan_high = max(fan_current, 1)
             self.fan_stream = BrailleStream(50, 1, fan_low, fan_high)
 
         self.box_title = ", ".join(
@@ -168,9 +172,20 @@ class CPU(Widget):
 
         if self.has_fan_rpm:
             fan_current = list(psutil.sensors_fans().values())[0][0].current
+
+            # See command above
+            if fan_current == 65535:
+                fan_current = self.fan_stream.maxval
+
+            if fan_current > self.fan_stream.maxval:
+                # TODO There should be a method that also rewrites all previous values
+                self.fan_stream.maxval = fan_current
+
             self.fan_stream.add_value(fan_current)
-            string = f"{fan_current}rpm"
-            graph = "[red]" + self.fan_stream.graph[-1][: -len(string)] + string + "[/]"
+            string = f" {fan_current}rpm"
+            graph = (
+                "[cyan]" + self.fan_stream.graph[-1][: -len(string)] + string + "[/]"
+            )
             t.add_row(graph, "")
 
         self.panel = Panel(
