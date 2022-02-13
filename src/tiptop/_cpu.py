@@ -8,6 +8,8 @@ from textual.widget import Widget
 
 from .braille_stream import BrailleStream
 
+# from textual import log
+
 
 def val_to_color(val: float, minval: float, maxval: float) -> str:
     t = (val - minval) / (maxval - minval)
@@ -95,6 +97,18 @@ class CPU(Widget):
                     for k in range(self.num_cores)
                 ]
 
+        self.has_fan_rpm = False
+        try:
+            self.fan_rpm = psutil.sensors_fans()
+        except AttributeError:
+            pass
+        else:
+            self.has_fan_rpm = True
+            fan_low = 0
+            fan_high = list(self.fan_rpm.values())[0][0].current
+            fan_high = max(fan_high, 1)
+            self.fan_stream = BrailleStream(50, 1, fan_low, fan_high)
+
         self.box_title = ", ".join(
             [
                 f"{self.num_cores} core" + ("s" if self.num_cores > 1 else ""),
@@ -115,7 +129,6 @@ class CPU(Widget):
             stream.add_value(load)
 
         # CPU temperatures
-
         if self.has_cpu_temp or self.has_core_temps:
             temps = psutil.sensors_temperatures()
 
@@ -131,16 +144,16 @@ class CPU(Widget):
                     stream.add_value(temp.current)
 
         lines_cpu = self.cpu_total_stream.graph
-        last_val_string = f"{self.cpu_total_stream.values[-1]:5.1f}%"
-        lines0 = lines_cpu[0][: -len(last_val_string)] + last_val_string
+        current_val_string = f"{self.cpu_total_stream.values[-1]:5.1f}%"
+        lines0 = lines_cpu[0][: -len(current_val_string)] + current_val_string
         lines_cpu = [lines0] + lines_cpu[1:]
         #
         cpu_total_graph = "[blue]" + "\n".join(lines_cpu) + "[/]\n"
         #
         if self.has_cpu_temp:
             lines_temp = self.temp_total_stream.graph
-            last_val_string = f"{round(self.temp_total_stream.values[-1]):3d}°C"
-            lines0 = lines_temp[-1][: -len(last_val_string)] + last_val_string
+            current_val_string = f"{round(self.temp_total_stream.values[-1]):3d}°C"
+            lines0 = lines_temp[-1][: -len(current_val_string)] + current_val_string
             lines_temp = lines_temp[:-1] + [lines0]
             cpu_total_graph += "[magenta]" + "\n".join(lines_temp) + "[/]"
 
@@ -152,6 +165,13 @@ class CPU(Widget):
         t.add_column("graph", no_wrap=True, ratio=1)
         t.add_column("box", no_wrap=True, justify="left", vertical="middle")
         t.add_row(cpu_total_graph, info_box)
+
+        if self.has_fan_rpm:
+            fan_current = list(psutil.sensors_fans().values())[0][0].current
+            self.fan_stream.add_value(fan_current)
+            string = f"{fan_current}rpm"
+            graph = "[red]" + self.fan_stream.graph[-1][: -len(string)] + string + "[/]"
+            t.add_row(graph, "")
 
         self.panel = Panel(
             t,
@@ -221,15 +241,32 @@ class CPU(Widget):
         self.width = event.width
         self.height = event.height
 
-        self.cpu_total_stream.reset_width(self.width - self.info_box_width - 5)
+        # reset graph widths
+        graph_width = self.width - self.info_box_width - 5
+        self.cpu_total_stream.reset_width(graph_width)
+        if self.has_cpu_temp:
+            self.temp_total_stream.reset_width(graph_width)
+        if self.has_fan_rpm:
+            self.fan_stream.reset_width(graph_width)
 
+        # reset graph heights
+        # subtract border
+        total_height = self.height - 2
         if self.has_cpu_temp:
             # cpu total stream height: divide by two and round _down_
-            self.cpu_total_stream.reset_height((self.height - 2) // 2)
+            self.cpu_total_stream.reset_height(total_height // 2)
             #
-            self.temp_total_stream.reset_width(self.width - self.info_box_width - 5)
-            # temp total stream height: divide by two and round _up_
-            self.temp_total_stream.reset_height(-((2 - self.height) // 2))
+            # temp total stream height: divide by two and round _up_. Subtract
+            # one if a fan stream is present.
+            temp_stream_height = -((-total_height) // 2)
+            if self.has_fan_rpm:
+                temp_stream_height -= 1
+
+            self.temp_total_stream.reset_height(temp_stream_height)
         else:
             # full size cpu stream
-            self.cpu_total_stream.reset_height(self.height - 2)
+            cpu_stream_height = total_height
+            if self.has_fan_rpm:
+                cpu_stream_height -= 1
+
+            self.cpu_total_stream.reset_height(cpu_stream_height)
