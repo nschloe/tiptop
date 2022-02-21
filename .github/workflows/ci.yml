@@ -29,7 +29,7 @@ jobs:
         exclude:
           # Windows tests fail on 3.10 -- somehow the output of tiptop --help is off
           - os: windows-latest
-            node: "3.10"
+            python-version: "3.10"
     steps:
       - uses: actions/setup-python@v2
         with:
