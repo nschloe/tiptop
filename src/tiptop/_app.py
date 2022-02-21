@@ -46,6 +46,14 @@ def run(argv=None):
     )
 
     parser.add_argument(
+        "--log",
+        "-l",
+        type=str,
+        default=None,
+        help="debug log file",
+    )
+
+    parser.add_argument(
         "--net",
         "-n",
         type=str,
@@ -111,7 +119,7 @@ def run(argv=None):
         async def on_load(self, _):
             await self.bind("q", "quit", "quit")
 
-    TiptopApp.run(log="textual.log")
+    TiptopApp.run(log=args.log)
 
 
 def _get_version_text():
