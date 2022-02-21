@@ -47,13 +47,14 @@ tiptop -h
 <!--pytest-codeblocks: expected-output-->
 
 ```
-usage: tiptop [-h] [--version] [--net NET]
+usage: tiptop [-h] [--version] [--log LOG] [--net NET]
 
 Command-line system monitor.
 
 options:
   -h, --help         show this help message and exit
   --version, -v      display version information
+  --log LOG, -l LOG  debug log file
   --net NET, -n NET  network interface to display (default: auto)
 ```
 
