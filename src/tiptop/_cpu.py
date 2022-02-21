@@ -99,15 +99,14 @@ class CPU(Widget):
 
         self.has_fan_rpm = False
         try:
-            self.fan_rpm = psutil.sensors_fans()
-        except AttributeError:
+            fan_current = list(psutil.sensors_fans().values())[0][0].current
+        except (AttributeError, IndexError):
             pass
         else:
             self.has_fan_rpm = True
             fan_low = 0
-            fan_current = list(self.fan_rpm.values())[0][0].current
-            # Sometimes, psutil/computers will falsely report a fan speed of
-            # 65535 which is 2 ** 16 - 1; dismiss that.
+            # Sometimes, psutil/computers will incorrectly report a fan
+            # speed of 2 ** 16 - 1; dismiss that.
             if fan_current == 65535:
                 fan_current = 1
             fan_high = max(fan_current, 1)
