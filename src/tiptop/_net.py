@@ -53,14 +53,6 @@ class Net(Widget):
         super().__init__()
 
     def on_mount(self):
-        self.group = Group("", "", "")
-        self.panel = Panel(
-            self.group,
-            title=f"net - {self.interface}",
-            border_style="red",
-            title_align="left",
-            box=box.SQUARE,
-        )
         self.down_box = Panel(
             "",
             title="▼ down",
@@ -75,6 +67,21 @@ class Net(Widget):
             title_align="left",
             style="blue",
             width=20,
+            box=box.SQUARE,
+        )
+        self.table = Table(expand=True, show_header=False, padding=0, box=None)
+        # Add ratio 1 to expand that column as much as possible
+        self.table.add_column("graph", no_wrap=True, ratio=1)
+        self.table.add_column("box", no_wrap=True, width=20)
+        self.table.add_row("", self.down_box)
+        self.table.add_row("", self.up_box)
+
+        self.group = Group(self.table, "", "")
+        self.panel = Panel(
+            self.group,
+            title=f"net - {self.interface}",
+            border_style="red",
+            title_align="left",
             box=box.SQUARE,
         )
 
@@ -156,15 +163,12 @@ class Net(Widget):
             ]
         )
 
-        t = Table(expand=True, show_header=False, padding=0, box=None)
-        # Add ratio 1 to expand that column as much as possible
-        t.add_column("graph", no_wrap=True, ratio=1)
-        t.add_column("box", no_wrap=True, width=self.down_box.width)
-
-        t.add_row("[green]" + "\n".join(self.recv_stream.graph) + "[/]", self.down_box)
-        t.add_row("[blue]" + "\n".join(self.sent_stream.graph) + "[/]", self.up_box)
-
-        self.group.renderables[0] = t
+        self.table.columns[0]._cells[0] = (
+            "[green]" + "\n".join(self.recv_stream.graph) + "[/]"
+        )
+        self.table.columns[0]._cells[1] = (
+            "[blue]" + "\n".join(self.sent_stream.graph) + "[/]"
+        )
 
         self.refresh()
 
