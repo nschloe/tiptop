@@ -20,21 +20,6 @@ from .braille_stream import BrailleStream
 #     return ip
 
 
-def get_ips(interface):
-    addrs = psutil.net_if_addrs()[interface]
-    ipv4 = []
-    for addr in addrs:
-        # ipv4?
-        if addr.family == socket.AF_INET:
-            ipv4.append(addr.address + " / " + addr.netmask)
-    ipv6 = []
-    for addr in addrs:
-        # ipv4?
-        if addr.family == socket.AF_INET6:
-            ipv6.append(addr.address)
-    return ipv4, ipv6
-
-
 def _autoselect_interface():
     """try to find non-lo and non-docker interface that is up"""
     stats = psutil.net_if_stats()
@@ -101,17 +86,31 @@ class Net(Widget):
         self.recv_stream = BrailleStream(20, 5, 0.0, 1.0e6)
         self.sent_stream = BrailleStream(20, 5, 0.0, 1.0e6, flipud=True)
 
-        # self.ip = get_ip()
-        self.collect_data()
+        self.refresh_ips()
+        self.refresh_panel()
 
         self.interval_s = 2.0
-        self.set_interval(self.interval_s, self.collect_data)
+        self.set_interval(self.interval_s, self.refresh_panel)
+        self.set_interval(60.0, self.refresh_ips)
+
+    def refresh_ips(self):
+        addrs = psutil.net_if_addrs()[self.interface]
+        ipv4 = []
+        for addr in addrs:
+            # ipv4?
+            if addr.family == socket.AF_INET:
+                ipv4.append(addr.address + " / " + addr.netmask)
+        ipv6 = []
+        for addr in addrs:
+            # ipv4?
+            if addr.family == socket.AF_INET6:
+                ipv6.append(addr.address)
+        self.ipv4 = "\n      ".join(ipv4)
+        self.ipv6 = "\n      ".join(ipv6)
 
     # would love to collect data upon each render(), but render is called too often
     # <https://github.com/willmcgugan/textual/issues/162>
-    def collect_data(self):
-        ipv4, ipv6 = get_ips(self.interface)
-
+    def refresh_panel(self):
         net = psutil.net_io_counters(pernic=True)[self.interface]
         if self.last_net is None:
             recv_bytes_s_string = ""
@@ -161,9 +160,9 @@ class Net(Widget):
         t.add_row("[green]" + "\n".join(self.recv_stream.graph) + "[/]", self.down_box)
         t.add_row("[blue]" + "\n".join(self.sent_stream.graph) + "[/]", self.up_box)
 
-        ipv4 = "\n      ".join(ipv4)
-        ipv6 = "\n      ".join(ipv6)
-        self.panel.renderable = Group(t, f"[b]IPv4:[/] {ipv4}", f"[b]IPv6:[/] {ipv6}")
+        self.panel.renderable = Group(
+            t, f"[b]IPv4:[/] {self.ipv4}", f"[b]IPv6:[/] {self.ipv6}"
+        )
 
         self.refresh()
 
