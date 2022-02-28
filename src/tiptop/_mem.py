@@ -32,9 +32,14 @@ class Mem(Widget):
         for _ in range(len(self.attrs)):
             self.mem_streams.append(BrailleStream(40, 4, 0.0, self.mem_total_bytes))
 
+        self.table = Table(box=None, expand=True, padding=0, show_header=False)
+        self.table.add_column(justify="left", no_wrap=True)
+        for k in range(len(self.attrs)):
+            self.table.add_row(f"[{self.colors[k]}]gg[/]")
+
         mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
         self.panel = Panel(
-            self.build_table(),
+            self.table,
             title=f"mem - {mem_total_string}",
             title_align="left",
             border_style="green",
@@ -43,10 +48,11 @@ class Mem(Widget):
 
         self.set_interval(2.0, self.collect_data)
 
-    def build_table(self):
+    def refresh_table(self):
         mem = psutil.virtual_memory()
-        graphs = []
-        for attr, label, stream in zip(self.attrs, self.labels, self.mem_streams):
+        for k, (attr, label, stream) in enumerate(
+            zip(self.attrs, self.labels, self.mem_streams)
+        ):
             val = getattr(mem, attr)
             stream.add_value(val)
             val_string = " ".join(
@@ -56,20 +62,13 @@ class Mem(Widget):
                     f"({val / self.mem_total_bytes * 100:.0f}%)",
                 ]
             )
-            graphs.append(
-                "\n".join(
-                    [val_string + stream.graph[0][len(val_string) :]] + stream.graph[1:]
-                )
+            graph = "\n".join(
+                [val_string + stream.graph[0][len(val_string) :]] + stream.graph[1:]
             )
-
-        table = Table(box=None, expand=True, padding=0, show_header=False)
-        table.add_column(justify="left", no_wrap=True)
-        for k, graph in enumerate(graphs):
-            table.add_row(f"[{self.colors[k]}]{graph}[/]")
-        return table
+            self.table.columns[0]._cells[k] = f"[{self.colors[k]}]{graph}[/]"
 
     def collect_data(self):
-        self.panel.renderable = self.build_table()
+        self.refresh_table()
         self.refresh()
 
     def render(self) -> Panel:
