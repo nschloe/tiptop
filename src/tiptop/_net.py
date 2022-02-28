@@ -53,8 +53,9 @@ class Net(Widget):
         super().__init__()
 
     def on_mount(self):
+        self.group = Group("", "", "")
         self.panel = Panel(
-            "",
+            self.group,
             title=f"net - {self.interface}",
             border_style="red",
             title_align="left",
@@ -105,8 +106,11 @@ class Net(Widget):
             # ipv4?
             if addr.family == socket.AF_INET6:
                 ipv6.append(addr.address)
-        self.ipv4 = "\n      ".join(ipv4)
-        self.ipv6 = "\n      ".join(ipv6)
+
+        ipv4 = "\n      ".join(ipv4)
+        ipv6 = "\n      ".join(ipv6)
+        self.group.renderables[1] = f"[b]IPv4:[/] {ipv4}"
+        self.group.renderables[2] = f"[b]IPv6:[/] {ipv6}"
 
     # would love to collect data upon each render(), but render is called too often
     # <https://github.com/willmcgugan/textual/issues/162>
@@ -160,9 +164,7 @@ class Net(Widget):
         t.add_row("[green]" + "\n".join(self.recv_stream.graph) + "[/]", self.down_box)
         t.add_row("[blue]" + "\n".join(self.sent_stream.graph) + "[/]", self.up_box)
 
-        self.panel.renderable = Group(
-            t, f"[b]IPv4:[/] {self.ipv4}", f"[b]IPv6:[/] {self.ipv6}"
-        )
+        self.group.renderables[0] = t
 
         self.refresh()
 
