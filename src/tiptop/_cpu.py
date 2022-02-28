@@ -34,7 +34,6 @@ def flatten(lst):
 
 class CPU(Widget):
     def on_mount(self):
-        self.is_first_render = True
         self.width = 0
         self.height = 0
 
@@ -245,9 +244,6 @@ class CPU(Widget):
         self.info_box_width = 4 + len(Text.from_markup(lines[0]))
 
     def render(self):
-        if self.is_first_render:
-            self.collect_data()
-            self.is_first_render = False
         return self.panel
 
     async def on_resize(self, event):
