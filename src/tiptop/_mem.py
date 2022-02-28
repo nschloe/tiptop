@@ -10,10 +10,7 @@ from .braille_stream import BrailleStream
 
 class Mem(Widget):
     def on_mount(self):
-        self.is_first_render = True
-
         self.mem_total_bytes = psutil.virtual_memory().total
-        self.mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
 
         # check which mem sections are available on the machine
         self.attrs = []
@@ -35,9 +32,18 @@ class Mem(Widget):
         for _ in range(len(self.attrs)):
             self.mem_streams.append(BrailleStream(40, 4, 0.0, self.mem_total_bytes))
 
+        mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
+        self.panel = Panel(
+            self.build_table(),
+            title=f"mem - {mem_total_string}",
+            title_align="left",
+            border_style="green",
+            box=box.SQUARE,
+        )
+
         self.set_interval(2.0, self.collect_data)
 
-    def collect_data(self):
+    def build_table(self):
         mem = psutil.virtual_memory()
         graphs = []
         for attr, label, stream in zip(self.attrs, self.labels, self.mem_streams):
@@ -60,20 +66,13 @@ class Mem(Widget):
         table.add_column(justify="left", no_wrap=True)
         for k, graph in enumerate(graphs):
             table.add_row(f"[{self.colors[k]}]{graph}[/]")
+        return table
 
-        self.panel = Panel(
-            table,
-            title=f"mem - {self.mem_total_string}",
-            title_align="left",
-            border_style="green",
-            box=box.SQUARE,
-        )
+    def collect_data(self):
+        self.panel.renderable = self.build_table()
         self.refresh()
 
     def render(self) -> Panel:
-        if self.is_first_render:
-            self.collect_data()
-            self.is_first_render = False
         return self.panel
 
     async def on_resize(self, event):
