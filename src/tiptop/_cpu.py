@@ -128,7 +128,15 @@ class CPU(Widget):
         )
         self.info_box_width = 0
 
-        self.brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
+        brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
+        self.panel = Panel(
+            "",
+            title=f"cpu - {brand_raw}",
+            title_align="left",
+            border_style="blue",
+            box=box.SQUARE,
+        )
+
         self.set_interval(2.0, self.collect_data)
 
     def collect_data(self):
@@ -196,13 +204,7 @@ class CPU(Widget):
             )
             t.add_row(graph, "")
 
-        self.panel = Panel(
-            t,
-            title=f"cpu - {self.brand_raw}",
-            title_align="left",
-            border_style="blue",
-            box=box.SQUARE,
-        )
+        self.panel.renderable = t
 
         # textual method
         self.refresh()
