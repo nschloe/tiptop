@@ -12,6 +12,13 @@ from textual.widget import Widget
 from ._helpers import sizeof_fmt
 from .braille_stream import BrailleStream
 
+# def get_ip():
+#     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#     s.connect(("8.8.8.8", 80))
+#     ip = s.getsockname()[0]
+#     s.close()
+#     return ip
+
 
 def _autoselect_interface():
     """try to find non-lo and non-docker interface that is up"""
@@ -46,6 +53,38 @@ class Net(Widget):
         super().__init__()
 
     def on_mount(self):
+        self.down_box = Panel(
+            "",
+            title="▼ down",
+            title_align="left",
+            style="green",
+            width=20,
+            box=box.SQUARE,
+        )
+        self.up_box = Panel(
+            "",
+            title="▲ up",
+            title_align="left",
+            style="blue",
+            width=20,
+            box=box.SQUARE,
+        )
+        self.table = Table(expand=True, show_header=False, padding=0, box=None)
+        # Add ratio 1 to expand that column as much as possible
+        self.table.add_column("graph", no_wrap=True, ratio=1)
+        self.table.add_column("box", no_wrap=True, width=20)
+        self.table.add_row("", self.down_box)
+        self.table.add_row("", self.up_box)
+
+        self.group = Group(self.table, "", "")
+        self.panel = Panel(
+            self.group,
+            title=f"net - {self.interface}",
+            border_style="red",
+            title_align="left",
+            box=box.SQUARE,
+        )
+
         self.last_net = None
         self.max_recv_bytes_s = 0
         self.max_recv_bytes_s_str = ""
@@ -55,21 +94,14 @@ class Net(Widget):
         self.recv_stream = BrailleStream(20, 5, 0.0, 1.0e6)
         self.sent_stream = BrailleStream(20, 5, 0.0, 1.0e6, flipud=True)
 
-        self.update_ip()
-        self.collect_data()
+        self.refresh_ips()
+        self.refresh_panel()
 
         self.interval_s = 2.0
-        self.set_interval(self.interval_s, self.collect_data)
+        self.set_interval(self.interval_s, self.refresh_panel)
+        self.set_interval(60.0, self.refresh_ips)
 
-    def update_ip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        self.ip = s.getsockname()[0]
-        s.close()
-
-    # would love to collect data upon each render(), but render is called too often
-    # <https://github.com/willmcgugan/textual/issues/162>
-    def collect_data(self):
+    def refresh_ips(self):
         addrs = psutil.net_if_addrs()[self.interface]
         ipv4 = []
         for addr in addrs:
@@ -82,6 +114,14 @@ class Net(Widget):
             if addr.family == socket.AF_INET6:
                 ipv6.append(addr.address)
 
+        ipv4 = "\n      ".join(ipv4)
+        ipv6 = "\n      ".join(ipv6)
+        self.group.renderables[1] = f"[b]IPv4:[/] {ipv4}"
+        self.group.renderables[2] = f"[b]IPv6:[/] {ipv6}"
+
+    # would love to collect data upon each render(), but render is called too often
+    # <https://github.com/willmcgugan/textual/issues/162>
+    def refresh_panel(self):
         net = psutil.net_io_counters(pernic=True)[self.interface]
         if self.last_net is None:
             recv_bytes_s_string = ""
@@ -108,57 +148,32 @@ class Net(Widget):
         total_recv_string = sizeof_fmt(net.bytes_recv, sep=" ", fmt=".1f")
         total_sent_string = sizeof_fmt(net.bytes_sent, sep=" ", fmt=".1f")
 
-        down_box_lines = [
-            f"{recv_bytes_s_string}",
-            f"max   {self.max_recv_bytes_s_str}",
-            f"total {total_recv_string}",
-        ]
-        down_box = Panel(
-            "\n".join(down_box_lines),
-            title="▼ down",
-            title_align="left",
-            style="green",
-            width=20,
-            box=box.SQUARE,
+        self.down_box.renderable = "\n".join(
+            [
+                f"{recv_bytes_s_string}",
+                f"max   {self.max_recv_bytes_s_str}",
+                f"total {total_recv_string}",
+            ]
         )
-        up_box_lines = [
-            f"{sent_bytes_s_string}",
-            f"max   {self.max_sent_bytes_s_str}",
-            f"total {total_sent_string}",
-        ]
-        up_box = Panel(
-            "\n".join(up_box_lines),
-            title="▲ up",
-            title_align="left",
-            style="blue",
-            width=20,
-            box=box.SQUARE,
+        self.up_box.renderable = "\n".join(
+            [
+                f"{sent_bytes_s_string}",
+                f"max   {self.max_sent_bytes_s_str}",
+                f"total {total_sent_string}",
+            ]
         )
 
-        t = Table(expand=True, show_header=False, padding=0, box=None)
-        # Add ratio 1 to expand that column as much as possible
-        t.add_column("graph", no_wrap=True, ratio=1)
-        t.add_column("box", no_wrap=True, width=down_box.width)
-
-        t.add_row("[green]" + "\n".join(self.recv_stream.graph) + "[/]", down_box)
-        t.add_row("[blue]" + "\n".join(self.sent_stream.graph) + "[/]", up_box)
-
-        ipv4 = "\n      ".join(ipv4)
-        ipv6 = "\n      ".join(ipv6)
-        g = Group(t, f"[b]IPv4:[/] {ipv4}", f"[b]IPv6:[/] {ipv6}")
-
-        self.content = Panel(
-            g,
-            title=f"net - {self.interface}",
-            border_style="red",
-            title_align="left",
-            box=box.SQUARE,
+        self.table.columns[0]._cells[0] = (
+            "[green]" + "\n".join(self.recv_stream.graph) + "[/]"
+        )
+        self.table.columns[0]._cells[1] = (
+            "[blue]" + "\n".join(self.sent_stream.graph) + "[/]"
         )
 
         self.refresh()
 
     def render(self):
-        return self.content
+        return self.panel
 
     async def on_resize(self, event):
         self.sent_stream.reset_width(event.width - 25)

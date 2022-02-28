@@ -34,11 +34,8 @@ def flatten(lst):
 
 class CPU(Widget):
     def on_mount(self):
-        self.is_first_render = True
         self.width = 0
         self.height = 0
-
-        self.info_box_width = 0
 
         # self.max_graph_width = 200
 
@@ -112,14 +109,33 @@ class CPU(Widget):
             fan_high = max(fan_current, 1)
             self.fan_stream = BrailleStream(50, 1, fan_low, fan_high)
 
-        self.box_title = ", ".join(
+        box_title = ", ".join(
             [
                 f"{self.num_cores} core" + ("s" if self.num_cores > 1 else ""),
                 f"{num_threads} thread" + ("s" if num_threads > 1 else ""),
             ]
         )
+        self.info_box = Panel(
+            "",
+            title=box_title,
+            title_align="left",
+            subtitle=None,
+            subtitle_align="left",
+            border_style="white",
+            box=box.SQUARE,
+            expand=False,
+        )
+        self.info_box_width = 0
 
-        self.brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
+        brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
+        self.panel = Panel(
+            "",
+            title=f"cpu - {brand_raw}",
+            title_align="left",
+            border_style="blue",
+            box=box.SQUARE,
+        )
+
         self.set_interval(2.0, self.collect_data)
 
     def collect_data(self):
@@ -161,13 +177,13 @@ class CPU(Widget):
             cpu_total_graph += "[magenta]" + "\n".join(lines_temp) + "[/]"
 
         # construct right info box
-        info_box, self.info_box_width = self._construct_info_box(load_per_thread)
+        self._refresh_info_box(load_per_thread)
 
         t = Table(expand=True, show_header=False, padding=0, box=None)
         # Add ratio 1 to expand that column as much as possible
         t.add_column("graph", no_wrap=True, ratio=1)
         t.add_column("box", no_wrap=True, justify="left", vertical="middle")
-        t.add_row(cpu_total_graph, info_box)
+        t.add_row(cpu_total_graph, self.info_box)
 
         if self.has_fan_rpm:
             fan_current = list(psutil.sensors_fans().values())[0][0].current
@@ -187,18 +203,12 @@ class CPU(Widget):
             )
             t.add_row(graph, "")
 
-        self.panel = Panel(
-            t,
-            title=f"cpu - {self.brand_raw}",
-            title_align="left",
-            border_style="blue",
-            box=box.SQUARE,
-        )
+        self.panel.renderable = t
 
         # textual method
         self.refresh()
 
-    def _construct_info_box(self, load_per_thread):
+    def _refresh_info_box(self, load_per_thread):
         lines = []
         for core_id, thread_ids in enumerate(self.core_threads):
             line = []
@@ -220,35 +230,20 @@ class CPU(Widget):
 
             lines.append(" ".join(line))
 
-        info_box_content = "\n".join(lines)
+        self.info_box.renderable = "\n".join(lines)
 
         try:
             cpu_freq = psutil.cpu_freq().current
         except Exception:
             # https://github.com/nschloe/tiptop/issues/25
-            subtitle = None
+            self.info_box.subtitle = None
         else:
-            subtitle = f"{round(cpu_freq):4d} MHz"
-
-        info_box = Panel(
-            info_box_content,
-            title=self.box_title,
-            title_align="left",
-            subtitle=subtitle,
-            subtitle_align="left",
-            border_style="white",
-            box=box.SQUARE,
-            expand=False,
-        )
+            self.info_box.subtitle = f"{round(cpu_freq):4d} MHz"
 
         # https://github.com/willmcgugan/rich/discussions/1559#discussioncomment-1459008
-        width = 4 + len(Text.from_markup(lines[0]))
-        return info_box, width
+        self.info_box_width = 4 + len(Text.from_markup(lines[0]))
 
     def render(self):
-        if self.is_first_render:
-            self.collect_data()
-            self.is_first_render = False
         return self.panel
 
     async def on_resize(self, event):
