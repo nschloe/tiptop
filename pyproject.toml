@@ -40,4 +40,4 @@ Issues = "https://github.com/nschloe/tiptop/issues"
 Funding = "https://github.com/sponsors/nschloe"
 
 [project.scripts]
-tiptop = "tiptop._app:run"
+tiptop2 = "tiptop._app:run"

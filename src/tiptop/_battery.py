@@ -8,8 +8,16 @@ from .braille_stream import BrailleStream
 
 class Battery(Widget):
     def on_mount(self):
-        self.is_first_render = True
         self.bat_stream = BrailleStream(40, 4, 0.0, 100.0)
+
+        self.panel = Panel(
+            "",
+            title="",
+            title_align="left",
+            border_style="yellow",
+            box=box.SQUARE,
+        )
+        self.collect_data()
         # update frequency: 1 min
         self.set_interval(60.0, self.collect_data)
 
@@ -18,7 +26,7 @@ class Battery(Widget):
 
         self.bat_stream.add_value(bat.percent)
 
-        battery_graph = "[yellow]" + "\n".join(self.bat_stream.graph) + "[/]\n"
+        self.panel.renderable = "[yellow]" + "\n".join(self.bat_stream.graph) + "[/]\n"
 
         if bat.power_plugged:
             status = "charging"
@@ -36,19 +44,11 @@ class Battery(Widget):
         if bat.percent < 15 and not bat.power_plugged:
             title = "[red reverse bold]" + title + "[/]"
 
-        self.panel = Panel(
-            battery_graph,
-            title=title,
-            title_align="left",
-            border_style="yellow",
-            box=box.SQUARE,
-        )
+        self.panel.title = title
+
         self.refresh()
 
     def render(self) -> Panel:
-        if self.is_first_render:
-            self.collect_data()
-            self.is_first_render = False
         return self.panel
 
     async def on_resize(self, event):

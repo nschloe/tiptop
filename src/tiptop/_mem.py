@@ -35,7 +35,7 @@ class Mem(Widget):
         self.table = Table(box=None, expand=True, padding=0, show_header=False)
         self.table.add_column(justify="left", no_wrap=True)
         for k in range(len(self.attrs)):
-            self.table.add_row(f"[{self.colors[k]}]gg[/]")
+            self.table.add_row("")
 
         mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
         self.panel = Panel(
@@ -46,7 +46,7 @@ class Mem(Widget):
             box=box.SQUARE,
         )
 
-        self.set_interval(2.0, self.collect_data)
+        self.set_interval(2.0, self.refresh_table)
 
     def refresh_table(self):
         mem = psutil.virtual_memory()
@@ -66,9 +66,6 @@ class Mem(Widget):
                 [val_string + stream.graph[0][len(val_string) :]] + stream.graph[1:]
             )
             self.table.columns[0]._cells[k] = f"[{self.colors[k]}]{graph}[/]"
-
-    def collect_data(self):
-        self.refresh_table()
         self.refresh()
 
     def render(self) -> Panel:
