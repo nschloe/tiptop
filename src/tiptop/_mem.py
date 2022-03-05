@@ -92,12 +92,14 @@ class Mem(Widget):
             ms.reset_width(event.width - 4)
 
         # split the available event.height-2 into n even blocks, and if there's
-        # a rest, divide it up into the last, e.g., with n=4
-        # 17 -> 4, 4, 4, 5
+        # a rest, divide it up into the first, e.g., with n=4
+        # 17 -> 5, 4, 4, 4
         n = len(self.attrs)
         heights = [(event.height - 2) // n] * n
         for k in range((event.height - 2) % n):
-            heights[-(k + 1)] += 1
+            heights[k] += 1
+            # add to last:
+            # heights[-(k + 1)] += 1
 
         for ms, h in zip(self.mem_streams, heights):
             ms.reset_height(h)
