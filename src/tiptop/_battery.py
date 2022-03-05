@@ -8,7 +8,7 @@ from .braille_stream import BrailleStream
 
 class Battery(Widget):
     def on_mount(self):
-        self.bat_stream = BrailleStream(40, 4, 0.0, 100.0)
+        self.bat_stream = BrailleStream(40, 3, 0.0, 100.0)
 
         self.panel = Panel(
             "",
