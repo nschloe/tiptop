@@ -95,10 +95,10 @@ def run(argv=None):
                 )
             else:
                 grid.add_row(size=1, name="topline")
-                grid.add_row(fraction=3, name="top")
-                grid.add_row(fraction=1, name="center1")
-                grid.add_row(fraction=3, name="center2")
-                grid.add_row(fraction=3, name="bottom")
+                grid.add_row(fraction=15, name="top")
+                grid.add_row(fraction=4, name="center1")
+                grid.add_row(fraction=16, name="center2")
+                grid.add_row(fraction=15, name="bottom")
                 grid.add_areas(
                     area0="left-start|right-end,topline",
                     area1="left-start|right-end,top",
