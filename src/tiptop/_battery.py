@@ -1,6 +1,7 @@
 import psutil
 from rich import box
 from rich.panel import Panel
+from rich.text import Text
 from textual.widget import Widget
 
 from .braille_stream import BrailleStream
@@ -28,7 +29,7 @@ class Battery(Widget):
 
         self.bat_stream.add_value(bat.percent)
 
-        self.panel.renderable = "[yellow]" + "\n".join(self.bat_stream.graph) + "[/]\n"
+        self.panel.renderable = Text("\n".join(self.bat_stream.graph), style="yellow")
 
         if bat.power_plugged:
             status = "charging"

@@ -7,6 +7,7 @@ from rich import box
 from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 from textual.widget import Widget
 
 from .__about__ import __version__
@@ -168,11 +169,11 @@ class Net(Widget):
             ]
         )
 
-        self.table.columns[0]._cells[0] = (
-            "[green]" + "\n".join(self.recv_stream.graph) + "[/]"
+        self.table.columns[0]._cells[0] = Text(
+            "\n".join(self.recv_stream.graph), style="green"
         )
-        self.table.columns[0]._cells[1] = (
-            "[blue]" + "\n".join(self.sent_stream.graph) + "[/]"
+        self.table.columns[0]._cells[1] = Text(
+            "\n".join(self.sent_stream.graph), style="blue"
         )
 
         self.refresh()

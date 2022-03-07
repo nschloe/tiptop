@@ -2,6 +2,7 @@ import psutil
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 from textual.widget import Widget
 
 from ._helpers import sizeof_fmt
@@ -82,7 +83,7 @@ class Mem(Widget):
             graph = "\n".join(
                 [val_string + stream.graph[0][len(val_string) :]] + stream.graph[1:]
             )
-            self.table.columns[0]._cells[k] = f"[{self.colors[k]}]{graph}[/]"
+            self.table.columns[0]._cells[k] = Text(graph, style=self.colors[k])
 
         self.refresh()
 
