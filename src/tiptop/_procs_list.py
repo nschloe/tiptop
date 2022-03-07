@@ -2,6 +2,7 @@ import psutil
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 from textual.widget import Widget
 
 from .__about__ import __version__
@@ -51,21 +52,34 @@ class ProcsList(Widget):
             show_header=True,
             header_style="bold",
             box=None,
-            padding=0,
+            padding=(0, 1),
             expand=True,
         )
-        table.add_column("pid", min_width=6, no_wrap=True)
-        table.add_column("program", max_width=10, style="green", no_wrap=True)
-        table.add_column("args", max_width=20, no_wrap=True)
-        table.add_column("thr", width=3, style="green", no_wrap=True)
+        # set ration=1 on all columns that should be expanded
+        # <https://github.com/Textualize/rich/issues/2030>
+        table.add_column(Text("pid", justify="left"), no_wrap=True, justify="right")
+        table.add_column("program", style="green", no_wrap=True, ratio=1)
+        table.add_column("args", no_wrap=True, ratio=2)
+        table.add_column(
+            Text("thr", justify="left"),
+            style="green",
+            no_wrap=True,
+            justify="right",
+        )
         table.add_column("user", no_wrap=True)
-        table.add_column("mem", style="green", no_wrap=True)
-        table.add_column("[u]cpu%[/]", width=5, no_wrap=True)
+        table.add_column(
+            Text("mem", justify="left"), style="green", no_wrap=True, justify="right"
+        )
+        table.add_column(
+            Text("cpu%", style="u", justify="left"),
+            no_wrap=True,
+            justify="right",
+        )
 
         for p in processes[: self.max_num_procs]:
             # Everything can be None here, see comment above
             pid = p.info["pid"]
-            pid = "" if pid is None else f"{pid:6d}"
+            pid = "" if pid is None else str(pid)
             #
             name = p.info["name"]
             if name is None:
@@ -75,7 +89,7 @@ class ProcsList(Widget):
             cmdline = "" if cmdline is None else " ".join(p.info["cmdline"][1:])
             #
             num_threads = p.info["num_threads"]
-            num_threads = "" if num_threads is None else f"{num_threads:3d}"
+            num_threads = "" if num_threads is None else str(num_threads)
             #
             username = p.info["username"]
             if username is None:
@@ -87,7 +101,7 @@ class ProcsList(Widget):
             )
             #
             cpu_percent = p.info["cpu_percent"]
-            cpu_percent = "" if cpu_percent is None else f"{cpu_percent:5.1f}"
+            cpu_percent = "" if cpu_percent is None else f"{cpu_percent:.1f}"
             table.add_row(
                 pid, name, cmdline, num_threads, username, mem_info, cpu_percent
             )
