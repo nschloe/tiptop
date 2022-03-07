@@ -254,7 +254,7 @@ class CPU(Widget):
         if self.has_fan_rpm:
             fan_current = list(psutil.sensors_fans().values())[0][0].current
 
-            # See command above
+            # See comment above
             if fan_current == 65535:
                 fan_current = self.fan_stream.maxval
 
@@ -264,8 +264,9 @@ class CPU(Widget):
 
             self.fan_stream.add_value(fan_current)
             string = f" {fan_current}rpm"
-            graph = (
-                "[cyan]" + self.fan_stream.graph[-1][: -len(string)] + string + "[/]"
+            graph = Text(
+                self.fan_stream.graph[-1][: -len(string)] + string,
+                style="cyan",
             )
             t.add_row(graph, "")
 
