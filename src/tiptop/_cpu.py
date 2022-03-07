@@ -8,8 +8,6 @@ from textual.widget import Widget
 
 from .braille_stream import BrailleStream
 
-# from textual import log
-
 
 def val_to_color(val: float, minval: float, maxval: float) -> str:
     t = (val - minval) / (maxval - minval)
@@ -125,7 +123,6 @@ class CPU(Widget):
             box=box.SQUARE,
             expand=False,
         )
-        self.info_box_width = 0
 
         brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
         self.panel = Panel(
@@ -136,6 +133,8 @@ class CPU(Widget):
             box=box.SQUARE,
         )
 
+        # immediately collect data to refresh info_box_width
+        self.collect_data()
         self.set_interval(2.0, self.collect_data)
 
     def collect_data(self):

@@ -52,6 +52,7 @@ class Mem(Widget):
             box=box.SQUARE,
         )
 
+        self.refresh_table()
         self.set_interval(2.0, self.refresh_table)
 
     def refresh_table(self):
