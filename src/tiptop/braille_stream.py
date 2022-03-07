@@ -60,9 +60,10 @@ class BrailleStream:
         elif value > self.maxval:
             k = 4 * self.height
         else:
-            k = ceil(
-                (value - self.minval) / (self.maxval - self.minval) * 4 * self.height
-            )
+            diff = self.maxval - self.minval
+            if diff == 0:
+                diff = 1
+            k = ceil((value - self.minval) / diff * 4 * self.height)
         # form blocks of 4
         blocks = [4] * (k // 4)
         if k % 4 > 0:
