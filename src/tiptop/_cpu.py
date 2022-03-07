@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 import psutil
 from rich import box
@@ -52,6 +53,43 @@ def get_cpu_model():
     return model_name
 
 
+def get_current_temps():
+    # First try manually reading the temperatures. (pyutil is slow.)
+    for key in ["coretemp", "k10temp"]:
+        path = Path(f"/sys/devices/platform/{key}.0/hwmon/hwmon6/")
+        if not path.is_dir():
+            continue
+
+        k = 1
+        temps = []
+        while True:
+            file = path / f"temp{k}_input"
+            if not file.exists():
+                break
+            with open(file) as f:
+                content = f.read()
+            temps.append(int(content) / 1000)
+            k += 1
+
+        return temps
+
+    # Not try psutil.sensors_temperatures().
+    # Slow, see <https://github.com/giampaolo/psutil/issues/2082>.
+    try:
+        temps = psutil.sensors_temperatures()
+    except AttributeError:
+        return None
+    else:
+        # coretemp: intel, k10temp: amd
+        # <https://github.com/nschloe/tiptop/issues/37>
+        for key in ["coretemp", "k10temp"]:
+            if key not in temps:
+                continue
+            return [t.current for t in temps[key]]
+
+    return None
+
+
 class CPU(Widget):
     def on_mount(self):
         self.width = 0
@@ -74,44 +112,30 @@ class CPU(Widget):
             # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
         ]
 
-        self.tempkey = None
-        self.has_cpu_temp = False
-        self.has_core_temps = False
+        temps = get_current_temps()
 
-        try:
-            temps = psutil.sensors_temperatures()
-        except AttributeError:
-            pass
+        if temps is None:
+            self.has_cpu_temp = False
+            self.has_core_temps = False
         else:
-            # coretemp: intel, k10temp: amd
-            # <https://github.com/nschloe/tiptop/issues/37>
-            for key in ["coretemp", "k10temp"]:
-                if key in temps:
-                    self.tempkey = key
-                    self.has_cpu_temp = len(temps[key]) > 0
-                    self.has_core_temps = len(temps[key]) == 1 + self.num_cores
-                    break
+            self.has_cpu_temp = len(temps) > 0
+            self.has_core_temps = len(temps) == 1 + self.num_cores
+
+            temps = get_current_temps()
 
             temp_low = 30.0
+            # TODO read from file
+            temp_high = 100.0
 
             if self.has_cpu_temp:
-                assert self.tempkey is not None
                 self.temp_total_stream = BrailleStream(
-                    50, 7, temp_low, temps[self.tempkey][0].high or 100.0, flipud=True
+                    50, 7, temp_low, temp_high, flipud=True
                 )
 
             if self.has_core_temps:
-                assert self.tempkey is not None
                 self.core_temp_streams = [
-                    BrailleStream(
-                        5,
-                        1,
-                        temp_low,
-                        temps[self.tempkey][k + 1].high
-                        or temps[self.tempkey][0].high
-                        or 100.0,
-                    )
-                    for k in range(self.num_cores)
+                    BrailleStream(5, 1, temp_low, temp_high)
+                    for _ in range(self.num_cores)
                 ]
 
         self.has_fan_rpm = False
@@ -169,18 +193,15 @@ class CPU(Widget):
 
         # CPU temperatures
         if self.has_cpu_temp or self.has_core_temps:
-            temps = psutil.sensors_temperatures()
+            temps = get_current_temps()
+            assert temps is not None
 
             if self.has_cpu_temp:
-                assert self.tempkey is not None
-                self.temp_total_stream.add_value(temps[self.tempkey][0].current)
+                self.temp_total_stream.add_value(temps[0])
 
             if self.has_core_temps:
-                assert self.tempkey is not None
-                for stream, temp in zip(
-                    self.core_temp_streams, temps[self.tempkey][1:]
-                ):
-                    stream.add_value(temp.current)
+                for stream, temp in zip(self.core_temp_streams, temps[1:]):
+                    stream.add_value(temp)
 
         lines_cpu = self.cpu_total_stream.graph
         current_val_string = f"{self.cpu_total_stream.values[-1]:5.1f}%"
