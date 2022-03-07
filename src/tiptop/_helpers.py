@@ -1,5 +1,5 @@
 # https://stackoverflow.com/a/1094933/353337
-def sizeof_fmt(num, suffix: str = "iB", sep=" ", fmt=".0f"):
+def sizeof_fmt(num, fmt=".0f", suffix: str = "iB", sep=" "):
     assert num >= 0
     for unit in ["B", "K", "M", "G", "T", "P", "E", "Z"]:
         # actually 1024, but be economical with the return string size:

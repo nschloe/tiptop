@@ -8,8 +8,6 @@ from textual.widget import Widget
 
 from .braille_stream import BrailleStream
 
-# from textual import log
-
 
 def val_to_color(val: float, minval: float, maxval: float) -> str:
     t = (val - minval) / (maxval - minval)
@@ -125,17 +123,18 @@ class CPU(Widget):
             box=box.SQUARE,
             expand=False,
         )
-        self.info_box_width = 0
 
         brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
         self.panel = Panel(
             "",
-            title=f"cpu - {brand_raw}",
+            title=f"[b]cpu[/] - {brand_raw}",
             title_align="left",
-            border_style="blue",
+            border_style="white",
             box=box.SQUARE,
         )
 
+        # immediately collect data to refresh info_box_width
+        self.collect_data()
         self.set_interval(2.0, self.collect_data)
 
     def collect_data(self):
@@ -238,6 +237,10 @@ class CPU(Widget):
             # https://github.com/nschloe/tiptop/issues/25
             self.info_box.subtitle = None
         else:
+            if psutil.__version__ == "5.9.0":
+                # Work around
+                # https://github.com/giampaolo/psutil/issues/2049
+                cpu_freq *= 1000
             self.info_box.subtitle = f"{round(cpu_freq):4d} MHz"
 
         # https://github.com/willmcgugan/rich/discussions/1559#discussioncomment-1459008
