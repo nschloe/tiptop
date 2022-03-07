@@ -1,4 +1,6 @@
-import cpuinfo
+import re
+from pathlib import Path
+
 import psutil
 from rich import box
 from rich.panel import Panel
@@ -30,6 +32,89 @@ def flatten(lst):
     return [item for sublist in lst for item in sublist]
 
 
+def get_cpu_model():
+    # cpuinfo does computation in addition to reading data, see
+    # <https://github.com/workhorsy/py-cpuinfo/issues/155#issuecomment-678923252>.
+    # Try to work around this.
+    # TODO keep an eye on the above bug.
+    try:
+        # On Linux, the file contains lines like
+        # ```
+        # model name	: Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz
+        # ```
+        with open("/proc/cpuinfo") as f:
+            content = f.read()
+        m = re.search(r"model name\t: (.*)", content)
+        model_name = m.group(1)
+    except Exception:
+        import cpuinfo
+
+        model_name = cpuinfo.get_cpu_info()["brand_raw"]
+    return model_name
+
+
+def get_current_temps():
+    # First try manually reading the temperatures. (pyutil is slow.)
+    for key in ["coretemp", "k10temp"]:
+        path = Path(f"/sys/devices/platform/{key}.0/hwmon/hwmon6/")
+        if not path.is_dir():
+            continue
+
+        k = 1
+        temps = []
+        while True:
+            file = path / f"temp{k}_input"
+            if not file.exists():
+                break
+            with open(file) as f:
+                content = f.read()
+            temps.append(int(content) / 1000)
+            k += 1
+
+        return temps
+
+    # Not try psutil.sensors_temperatures().
+    # Slow, see <https://github.com/giampaolo/psutil/issues/2082>.
+    try:
+        temps = psutil.sensors_temperatures()
+    except AttributeError:
+        return None
+    else:
+        # coretemp: intel, k10temp: amd
+        # <https://github.com/nschloe/tiptop/issues/37>
+        for key in ["coretemp", "k10temp"]:
+            if key not in temps:
+                continue
+            return [t.current for t in temps[key]]
+
+    return None
+
+
+def get_current_freq():
+    # psutil.cpu_freq() is slow, so first try something else:
+    # <https://github.com/nschloe/tiptop/issues/37>
+    candidates = [
+        "/sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq",
+        "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq",
+    ]
+    for candidate in candidates:
+        file = Path(candidate)
+        if file.exists():
+            with open(file) as f:
+                content = f.read()
+            return int(content) / 1000
+
+    c = psutil.cpu_freq()
+    if hasattr(c, "current"):
+        cpu_freq = c.current
+        if psutil.__version__ == "5.9.0" and cpu_freq < 10:
+            # Work around <https://github.com/giampaolo/psutil/issues/2049>
+            cpu_freq *= 1000
+        return cpu_freq
+
+    return None
+
+
 class CPU(Widget):
     def on_mount(self):
         self.width = 0
@@ -52,44 +137,30 @@ class CPU(Widget):
             # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
         ]
 
-        self.tempkey = None
-        self.has_cpu_temp = False
-        self.has_core_temps = False
+        temps = get_current_temps()
 
-        try:
-            temps = psutil.sensors_temperatures()
-        except AttributeError:
-            pass
+        if temps is None:
+            self.has_cpu_temp = False
+            self.has_core_temps = False
         else:
-            # coretemp: intel, k10temp: amd
-            # <https://github.com/nschloe/tiptop/issues/37>
-            for key in ["coretemp", "k10temp"]:
-                if key in temps:
-                    self.tempkey = key
-                    self.has_cpu_temp = len(temps[key]) > 0
-                    self.has_core_temps = len(temps[key]) == 1 + self.num_cores
-                    break
+            self.has_cpu_temp = len(temps) > 0
+            self.has_core_temps = len(temps) == 1 + self.num_cores
+
+            temps = get_current_temps()
 
             temp_low = 30.0
+            # TODO read from file
+            temp_high = 100.0
 
             if self.has_cpu_temp:
-                assert self.tempkey is not None
                 self.temp_total_stream = BrailleStream(
-                    50, 7, temp_low, temps[self.tempkey][0].high or 100.0, flipud=True
+                    50, 7, temp_low, temp_high, flipud=True
                 )
 
             if self.has_core_temps:
-                assert self.tempkey is not None
                 self.core_temp_streams = [
-                    BrailleStream(
-                        5,
-                        1,
-                        temp_low,
-                        temps[self.tempkey][k + 1].high
-                        or temps[self.tempkey][0].high
-                        or 100.0,
-                    )
-                    for k in range(self.num_cores)
+                    BrailleStream(5, 1, temp_low, temp_high)
+                    for _ in range(self.num_cores)
                 ]
 
         self.has_fan_rpm = False
@@ -124,10 +195,9 @@ class CPU(Widget):
             expand=False,
         )
 
-        brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
         self.panel = Panel(
             "",
-            title=f"[b]cpu[/] - {brand_raw}",
+            title=f"[b]cpu[/] - {get_cpu_model()}",
             title_align="left",
             border_style="white",
             box=box.SQUARE,
@@ -148,18 +218,15 @@ class CPU(Widget):
 
         # CPU temperatures
         if self.has_cpu_temp or self.has_core_temps:
-            temps = psutil.sensors_temperatures()
+            temps = get_current_temps()
+            assert temps is not None
 
             if self.has_cpu_temp:
-                assert self.tempkey is not None
-                self.temp_total_stream.add_value(temps[self.tempkey][0].current)
+                self.temp_total_stream.add_value(temps[0])
 
             if self.has_core_temps:
-                assert self.tempkey is not None
-                for stream, temp in zip(
-                    self.core_temp_streams, temps[self.tempkey][1:]
-                ):
-                    stream.add_value(temp.current)
+                for stream, temp in zip(self.core_temp_streams, temps[1:]):
+                    stream.add_value(temp)
 
         lines_cpu = self.cpu_total_stream.graph
         current_val_string = f"{self.cpu_total_stream.values[-1]:5.1f}%"
@@ -231,16 +298,12 @@ class CPU(Widget):
 
         self.info_box.renderable = "\n".join(lines)
 
-        try:
-            cpu_freq = psutil.cpu_freq().current
-        except Exception:
+        cpu_freq = get_current_freq()
+
+        if cpu_freq is None:
             # https://github.com/nschloe/tiptop/issues/25
             self.info_box.subtitle = None
         else:
-            if psutil.__version__ == "5.9.0":
-                # Work around
-                # https://github.com/giampaolo/psutil/issues/2049
-                cpu_freq *= 1000
             self.info_box.subtitle = f"{round(cpu_freq):4d} MHz"
 
         # https://github.com/willmcgugan/rich/discussions/1559#discussioncomment-1459008
