@@ -47,7 +47,8 @@ class Mem(Widget):
             self.table,
             title=f"mem - {mem_total_string}",
             title_align="left",
-            border_style="green",
+            # border_style="green",
+            border_style="white",
             box=box.SQUARE,
         )
 

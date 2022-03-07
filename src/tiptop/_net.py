@@ -80,7 +80,8 @@ class Net(Widget):
         self.panel = Panel(
             self.group,
             title=f"net - {self.interface}",
-            border_style="red",
+            # border_style="red",
+            border_style="white",
             title_align="left",
             box=box.SQUARE,
         )

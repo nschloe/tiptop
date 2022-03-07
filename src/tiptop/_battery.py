@@ -14,7 +14,8 @@ class Battery(Widget):
             "",
             title="",
             title_align="left",
-            border_style="yellow",
+            # border_style="yellow",
+            border_style="white",
             box=box.SQUARE,
         )
         self.collect_data()

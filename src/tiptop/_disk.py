@@ -55,7 +55,8 @@ class Disk(Widget):
         self.panel = Panel(
             self.group,
             title=f"disk",
-            border_style="magenta",
+            # border_style="magenta",
+            border_style="white",
             title_align="left",
             box=box.SQUARE,
         )

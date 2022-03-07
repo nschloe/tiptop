@@ -115,7 +115,8 @@ class ProcsList(Widget):
             title_align="left",
             subtitle=self.tiptop_string,
             subtitle_align="right",
-            border_style="cyan",
+            # border_style="cyan",
+            border_style="white",
             box=box.SQUARE,
         )
 

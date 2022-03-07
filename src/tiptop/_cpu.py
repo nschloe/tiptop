@@ -132,7 +132,7 @@ class CPU(Widget):
             "",
             title=f"cpu - {brand_raw}",
             title_align="left",
-            border_style="blue",
+            border_style="white",
             box=box.SQUARE,
         )
 
