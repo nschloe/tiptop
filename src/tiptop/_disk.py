@@ -120,11 +120,11 @@ class Disk(Widget):
             ]
         )
 
-        self.table.columns[0]._cells[0] = (
-            "[green]" + "\n".join(self.read_stream.graph) + "[/]"
+        self.table.columns[0]._cells[0] = Text(
+            "\n".join(self.read_stream.graph), style="green"
         )
-        self.table.columns[0]._cells[1] = (
-            "[blue]" + "\n".join(self.write_stream.graph) + "[/]"
+        self.table.columns[0]._cells[1] = Text(
+            "\n".join(self.write_stream.graph), style="blue"
         )
 
         table = Table(box=None, expand=False, padding=(0, 1), show_header=True)
