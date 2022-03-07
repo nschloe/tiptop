@@ -90,6 +90,31 @@ def get_current_temps():
     return None
 
 
+def get_current_freq():
+    # psutil.cpu_freq() is slow, so first try something else:
+    # <https://github.com/nschloe/tiptop/issues/37>
+    candidates = [
+        "/sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq",
+        "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq",
+    ]
+    for candidate in candidates:
+        file = Path(candidate)
+        if file.exists():
+            with open(file) as f:
+                content = f.read()
+            return int(content) / 1000
+
+    c = psutil.cpu_freq()
+    if hasattr(c, "current"):
+        cpu_freq = c.current
+        if psutil.__version__ == "5.9.0" and cpu_freq < 10:
+            # Work around <https://github.com/giampaolo/psutil/issues/2049>
+            cpu_freq *= 1000
+        return cpu_freq
+
+    return None
+
+
 class CPU(Widget):
     def on_mount(self):
         self.width = 0
@@ -273,16 +298,12 @@ class CPU(Widget):
 
         self.info_box.renderable = "\n".join(lines)
 
-        try:
-            cpu_freq = psutil.cpu_freq().current
-        except Exception:
+        cpu_freq = get_current_freq()
+
+        if cpu_freq is None:
             # https://github.com/nschloe/tiptop/issues/25
             self.info_box.subtitle = None
         else:
-            if psutil.__version__ == "5.9.0":
-                # Work around
-                # https://github.com/giampaolo/psutil/issues/2049
-                cpu_freq *= 1000
             self.info_box.subtitle = f"{round(cpu_freq):4d} MHz"
 
         # https://github.com/willmcgugan/rich/discussions/1559#discussioncomment-1459008
