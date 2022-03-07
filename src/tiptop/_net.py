@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 from textual.widget import Widget
 
+from .__about__ import __version__
 from ._helpers import sizeof_fmt
 from .braille_stream import BrailleStream
 
@@ -50,6 +51,7 @@ def _autoselect_interface():
 class Net(Widget):
     def __init__(self, interface: str | None = None):
         self.interface = _autoselect_interface() if interface is None else interface
+        self.tiptop_string = f"tiptop v{__version__}"
         super().__init__()
 
     def on_mount(self):
@@ -84,6 +86,8 @@ class Net(Widget):
             border_style="white",
             title_align="left",
             box=box.SQUARE,
+            subtitle=self.tiptop_string,
+            subtitle_align="right",
         )
 
         self.last_net = None

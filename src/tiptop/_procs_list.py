@@ -5,13 +5,11 @@ from rich.table import Table
 from rich.text import Text
 from textual.widget import Widget
 
-from .__about__ import __version__
 from ._helpers import sizeof_fmt
 
 
 class ProcsList(Widget):
     def on_mount(self):
-        self.tiptop_string = f"tiptop v{__version__}"
         self.max_num_procs = 100
         self.collect_data()
         self.set_interval(6.0, self.collect_data)
@@ -113,8 +111,6 @@ class ProcsList(Widget):
             table,
             title=f"proc - {len(processes)} ({total_num_threads} thr), {num_sleep} slp",
             title_align="left",
-            subtitle=self.tiptop_string,
-            subtitle_align="right",
             # border_style="cyan",
             border_style="white",
             box=box.SQUARE,
