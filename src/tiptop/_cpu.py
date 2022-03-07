@@ -1,4 +1,5 @@
-import cpuinfo
+import re
+
 import psutil
 from rich import box
 from rich.panel import Panel
@@ -28,6 +29,27 @@ def transpose(lst):
 
 def flatten(lst):
     return [item for sublist in lst for item in sublist]
+
+
+def get_cpu_model():
+    # cpuinfo does computation in addition to reading data, see
+    # <https://github.com/workhorsy/py-cpuinfo/issues/155#issuecomment-678923252>.
+    # Try to work around this.
+    # TODO keep an eye on the above bug.
+    try:
+        # On Linux, the file contains lines like
+        # ```
+        # model name	: Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz
+        # ```
+        with open("/proc/cpuinfo") as f:
+            content = f.read()
+        m = re.search(r"model name\t: (.*)", content)
+        model_name = m.group(1)
+    except Exception:
+        import cpuinfo
+
+        model_name = cpuinfo.get_cpu_info()["brand_raw"]
+    return model_name
 
 
 class CPU(Widget):
@@ -124,10 +146,9 @@ class CPU(Widget):
             expand=False,
         )
 
-        brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
         self.panel = Panel(
             "",
-            title=f"[b]cpu[/] - {brand_raw}",
+            title=f"[b]cpu[/] - {get_cpu_model()}",
             title_align="left",
             border_style="white",
             box=box.SQUARE,
