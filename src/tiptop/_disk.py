@@ -5,6 +5,7 @@ from rich import box
 from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 from textual.widget import Widget
 
 from ._helpers import sizeof_fmt
@@ -49,9 +50,8 @@ class Disk(Widget):
             sizeof_fmt(psutil.disk_usage(mp).total, fmt=".1f")
             for mp in self.mountpoints
         ]
-        # maxlen = max(len(mp) for mp in self.mountpoints)
 
-        self.group = Group(self.table, *self.mountpoints)
+        self.group = Group(self.table, "")
         self.panel = Panel(
             self.group,
             title=f"disk",
@@ -126,11 +126,31 @@ class Disk(Widget):
             "[blue]" + "\n".join(self.write_stream.graph) + "[/]"
         )
 
-        for k, (mp, total) in enumerate(zip(self.mountpoints, self.total)):
+        table = Table(box=None, expand=False, padding=(0, 1), show_header=True)
+        table.add_column("", justify="left", no_wrap=True)
+        table.add_column(Text("free", justify="left"), justify="right", no_wrap=True)
+        table.add_column(Text("used", justify="left"), justify="right", no_wrap=True)
+        table.add_column(Text("total", justify="left"), justify="right", no_wrap=True)
+        table.add_column("", justify="right", no_wrap=True)
+
+        for mp, total in zip(self.mountpoints, self.total):
             du = psutil.disk_usage(mp)
-            used = sizeof_fmt(du.used, fmt=".1f")
-            text = f"[b]{mp}:[/] {used} / {total} ({du.percent}%)"
-            self.group.renderables[k + 1] = text
+
+            style = None
+            if du.percent > 99:
+                style = "red reverse bold"
+            elif du.percent > 95:
+                style = "yellow"
+
+            table.add_row(
+                f"[b]{mp}[/]",
+                sizeof_fmt(du.free, fmt=".1f"),
+                sizeof_fmt(du.used, fmt=".1f"),
+                total,
+                f"({du.percent:.1f}%)",
+                style=style,
+            )
+        self.group.renderables[1] = table
 
         self.refresh()
 
