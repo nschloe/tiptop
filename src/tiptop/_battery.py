@@ -24,6 +24,7 @@ class Battery(Widget):
 
     def collect_data(self):
         bat = psutil.sensors_battery()
+        assert bat is not None
 
         self.bat_stream.add_value(bat.percent)
 
