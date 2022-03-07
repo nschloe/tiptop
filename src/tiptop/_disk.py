@@ -54,7 +54,7 @@ class Disk(Widget):
         self.group = Group(self.table, "")
         self.panel = Panel(
             self.group,
-            title=f"disk",
+            title=f"[b]disk[/]",
             # border_style="magenta",
             border_style="white",
             title_align="left",

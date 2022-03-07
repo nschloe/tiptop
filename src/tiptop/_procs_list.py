@@ -109,7 +109,7 @@ class ProcsList(Widget):
 
         self.panel = Panel(
             table,
-            title=f"proc - {len(processes)} ({total_num_threads} thr), {num_sleep} slp",
+            title=f"[b]proc[/] - {len(processes)} ({total_num_threads} thr), {num_sleep} slp",
             title_align="left",
             # border_style="cyan",
             border_style="white",

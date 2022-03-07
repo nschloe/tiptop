@@ -41,7 +41,7 @@ class Battery(Widget):
                 time_left_str.append(f"{mm}min")
             status = " ".join(time_left_str) + " left"
 
-        title = f"battery - {self.bat_stream.values[-1]:.1f}% - {status}"
+        title = f"[b]battery[/] - {self.bat_stream.values[-1]:.1f}% - {status}"
         if bat.percent < 15 and not bat.power_plugged:
             title = "[red reverse bold]" + title + "[/]"
 

@@ -130,7 +130,7 @@ class CPU(Widget):
         brand_raw = cpuinfo.get_cpu_info()["brand_raw"]
         self.panel = Panel(
             "",
-            title=f"cpu - {brand_raw}",
+            title=f"[b]cpu[/] - {brand_raw}",
             title_align="left",
             border_style="white",
             box=box.SQUARE,

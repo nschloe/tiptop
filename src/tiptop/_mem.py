@@ -45,7 +45,7 @@ class Mem(Widget):
         mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
         self.panel = Panel(
             self.table,
-            title=f"mem - {mem_total_string}",
+            title=f"[b]mem[/] - {mem_total_string}",
             title_align="left",
             # border_style="green",
             border_style="white",

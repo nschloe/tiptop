@@ -81,7 +81,7 @@ class Net(Widget):
         self.group = Group(self.table, "", "")
         self.panel = Panel(
             self.group,
-            title=f"net - {self.interface}",
+            title=f"[b]net[/] - {self.interface}",
             # border_style="red",
             border_style="white",
             title_align="left",
