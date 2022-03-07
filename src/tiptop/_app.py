@@ -76,22 +76,24 @@ def run(argv=None):
             grid.add_column(fraction=34, name="right")
 
             if psutil.sensors_battery() is None:
-                grid.add_row(size=1, name="topline")
-                grid.add_row(fraction=1, name="top")
-                grid.add_row(fraction=1, name="center")
-                grid.add_row(fraction=1, name="bottom")
+                grid.add_row(size=1, name="r0")
+                grid.add_row(fraction=1, name="r1")
+                grid.add_row(fraction=1, name="r2")
+                grid.add_row(fraction=1, name="r3")
                 grid.add_areas(
-                    area0="left-start|right-end,topline",
-                    area1="left-start|right-end,top",
-                    area2a="left,center",
-                    area2b="left,bottom",
-                    area3="right,center-start|bottom-end",
+                    area0="left-start|right-end,r0",
+                    area1="left,r1",
+                    area2a="right,r1",
+                    area2b="right,r2",
+                    area2c="right,r3",
+                    area3="left,r2-start|r3-end",
                 )
                 grid.place(
                     area0=InfoLine(),
                     area1=CPU(),
                     area2a=Mem(),
-                    area2b=Net(args.net),
+                    area2b=Disk(),
+                    area2c=Net(args.net),
                     area3=ProcsList(),
                 )
             else:
