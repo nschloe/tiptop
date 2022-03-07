@@ -146,8 +146,6 @@ class CPU(Widget):
             self.has_cpu_temp = len(temps) > 0
             self.has_core_temps = len(temps) == 1 + self.num_cores
 
-            temps = get_current_temps()
-
             temp_low = 30.0
             # TODO read from file
             temp_high = 100.0
