@@ -46,10 +46,6 @@ class Disk(Widget):
             for item in psutil.disk_partitions()
             if not item.device.startswith("/dev/loop")
         ]
-        self.total = [
-            sizeof_fmt(psutil.disk_usage(mp).total, fmt=".1f")
-            for mp in self.mountpoints
-        ]
 
         self.group = Group(self.table, "")
         self.panel = Panel(
@@ -128,14 +124,18 @@ class Disk(Widget):
         )
 
         table = Table(box=None, expand=False, padding=(0, 1), show_header=True)
-        table.add_column("", justify="left", no_wrap=True)
+        table.add_column("", justify="left", no_wrap=True, style="bold")
         table.add_column(Text("free", justify="left"), justify="right", no_wrap=True)
         table.add_column(Text("used", justify="left"), justify="right", no_wrap=True)
         table.add_column(Text("total", justify="left"), justify="right", no_wrap=True)
         table.add_column("", justify="right", no_wrap=True)
 
-        for mp, total in zip(self.mountpoints, self.total):
-            du = psutil.disk_usage(mp)
+        for mp in self.mountpoints:
+            try:
+                du = psutil.disk_usage(mp)
+            except PermissionError:
+                # https://github.com/nschloe/tiptop/issues/71
+                continue
 
             style = None
             if du.percent > 99:
@@ -144,10 +144,10 @@ class Disk(Widget):
                 style = "yellow"
 
             table.add_row(
-                f"[b]{mp}[/]",
+                mp,
                 sizeof_fmt(du.free, fmt=".1f"),
                 sizeof_fmt(du.used, fmt=".1f"),
-                total,
+                sizeof_fmt(du.total, fmt=".1f"),
                 f"({du.percent:.1f}%)",
                 style=style,
             )
