@@ -238,6 +238,10 @@ class CPU(Widget):
             # https://github.com/nschloe/tiptop/issues/25
             self.info_box.subtitle = None
         else:
+            if psutil.__version__ == "5.9.0":
+                # Work around
+                # https://github.com/giampaolo/psutil/issues/2049
+                cpu_freq *= 1000
             self.info_box.subtitle = f"{round(cpu_freq):4d} MHz"
 
         # https://github.com/willmcgugan/rich/discussions/1559#discussioncomment-1459008
