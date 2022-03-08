@@ -98,21 +98,21 @@ def get_current_freq():
         "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq",
     ]
     for candidate in candidates:
-        file = Path(candidate)
-        if file.exists():
-            with open(file) as f:
+        if Path(candidate).exists():
+            with open(candidate) as f:
                 content = f.read()
             return int(content) / 1000
 
-    c = psutil.cpu_freq()
-    if hasattr(c, "current"):
-        cpu_freq = c.current
-        if psutil.__version__ == "5.9.0" and cpu_freq < 10:
-            # Work around <https://github.com/giampaolo/psutil/issues/2049>
-            cpu_freq *= 1000
-        return cpu_freq
+    try:
+        cpu_freq = psutil.cpu_freq().current
+    except Exception:
+        # https://github.com/nschloe/tiptop/issues/25#issuecomment-1061390966
+        return None
 
-    return None
+    if psutil.__version__ == "5.9.0" and cpu_freq < 10:
+        # Work around <https://github.com/giampaolo/psutil/issues/2049>
+        cpu_freq *= 1000
+    return cpu_freq
 
 
 class CPU(Widget):
