@@ -1,7 +1,7 @@
 import psutil
 from rich import box
+from rich.console import Group
 from rich.panel import Panel
-from rich.table import Table
 from rich.text import Text
 from textual.widget import Widget
 
@@ -38,17 +38,13 @@ class Mem(Widget):
             total = swap.total if attr == "swap" else self.mem_total_bytes
             self.mem_streams.append(BrailleStream(40, 4, 0.0, total))
 
-        self.table = Table(box=None, expand=True, padding=0, show_header=False)
-        self.table.add_column(justify="left", no_wrap=True)
-        for _ in range(len(self.attrs)):
-            self.table.add_row("")
+        self.group = Group("", "", "", "", "")
 
         mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
         self.panel = Panel(
-            self.table,
+            self.group,
             title=f"[b]mem[/] - {mem_total_string}",
             title_align="left",
-            # border_style="green",
             border_style="white",
             box=box.SQUARE,
         )
@@ -60,8 +56,8 @@ class Mem(Widget):
         mem = psutil.virtual_memory()
         swap = psutil.swap_memory()
 
-        for k, (attr, label, stream) in enumerate(
-            zip(self.attrs, self.labels, self.mem_streams)
+        for k, (attr, label, stream, col) in enumerate(
+            zip(self.attrs, self.labels, self.mem_streams, self.colors)
         ):
             if attr == "swap":
                 val = swap.used
@@ -83,7 +79,7 @@ class Mem(Widget):
             graph = "\n".join(
                 [val_string + stream.graph[0][len(val_string) :]] + stream.graph[1:]
             )
-            self.table.columns[0]._cells[k] = Text(graph, style=self.colors[k])
+            self.group.renderables[k] = Text(graph, style=col)
 
         self.refresh()
 
