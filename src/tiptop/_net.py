@@ -168,7 +168,11 @@ class Net(Widget):
                 f"total {total_sent_string}",
             ]
         )
+        self.refresh_graphs()
 
+        self.refresh()
+
+    def refresh_graphs(self):
         self.table.columns[0]._cells[0] = Text(
             "\n".join(self.recv_stream.graph), style="green"
         )
@@ -176,11 +180,10 @@ class Net(Widget):
             "\n".join(self.sent_stream.graph), style="blue"
         )
 
-        self.refresh()
-
     def render(self):
         return self.panel
 
     async def on_resize(self, event):
         self.sent_stream.reset_width(event.width - 25)
         self.recv_stream.reset_width(event.width - 25)
+        self.refresh_graphs()
