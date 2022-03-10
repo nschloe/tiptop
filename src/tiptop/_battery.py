@@ -28,8 +28,7 @@ class Battery(Widget):
         assert bat is not None
 
         self.bat_stream.add_value(bat.percent)
-
-        self.panel.renderable = Text("\n".join(self.bat_stream.graph), style="yellow")
+        self.refresh_graph()
 
         if bat.power_plugged:
             status = "charging"
@@ -51,9 +50,13 @@ class Battery(Widget):
 
         self.refresh()
 
+    def refresh_graph(self):
+        self.panel.renderable = Text("\n".join(self.bat_stream.graph), style="yellow")
+
     def render(self) -> Panel:
         return self.panel
 
     async def on_resize(self, event):
         self.bat_stream.reset_width(event.width - 4)
         self.bat_stream.reset_height(event.height - 2)
+        self.refresh_graph()

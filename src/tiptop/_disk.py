@@ -136,7 +136,9 @@ class Disk(Widget):
                 f"total {total_write_string}",
             ]
         )
+        self.refresh_graphs()
 
+    def refresh_graphs(self):
         self.table.columns[0]._cells[0] = Text(
             "\n".join(self.read_stream.graph), style="green"
         )
@@ -182,3 +184,4 @@ class Disk(Widget):
         if self.has_io_counters:
             self.read_stream.reset_width(event.width - 25)
             self.write_stream.reset_width(event.width - 25)
+            self.refresh_graphs()

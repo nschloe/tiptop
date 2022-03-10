@@ -102,3 +102,5 @@ class Mem(Widget):
 
         for ms, h in zip(self.mem_streams, heights):
             ms.reset_height(h)
+
+        self.refresh_table()
