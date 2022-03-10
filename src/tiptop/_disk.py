@@ -17,29 +17,6 @@ class Disk(Widget):
         super().__init__()
 
     def on_mount(self):
-        self.down_box = Panel(
-            "",
-            title="read",
-            title_align="left",
-            style="green",
-            width=20,
-            box=box.SQUARE,
-        )
-        self.up_box = Panel(
-            "",
-            title="write",
-            title_align="left",
-            style="blue",
-            width=20,
-            box=box.SQUARE,
-        )
-        self.table = Table(expand=True, show_header=False, padding=0, box=None)
-        # Add ratio 1 to expand that column as much as possible
-        self.table.add_column("graph", no_wrap=True, ratio=1)
-        self.table.add_column("box", no_wrap=True, width=20)
-        self.table.add_row("", self.down_box)
-        self.table.add_row("", self.up_box)
-
         # kick out /dev/loop* devices
         self.mountpoints = [
             item.mountpoint
@@ -47,7 +24,53 @@ class Disk(Widget):
             if not item.device.startswith("/dev/loop")
         ]
 
-        self.group = Group(self.table, "")
+        # io counters aren't always available, see
+        # <https://github.com/nschloe/tiptop/issues/79>
+        self.has_io_counters = False
+        try:
+            psutil.disk_io_counters()
+        except Exception:
+            pass
+        else:
+            self.has_io_counters = True
+
+        if self.has_io_counters:
+            self.down_box = Panel(
+                "",
+                title="read",
+                title_align="left",
+                style="green",
+                width=20,
+                box=box.SQUARE,
+            )
+            self.up_box = Panel(
+                "",
+                title="write",
+                title_align="left",
+                style="blue",
+                width=20,
+                box=box.SQUARE,
+            )
+            self.table = Table(expand=True, show_header=False, padding=0, box=None)
+            # Add ratio 1 to expand that column as much as possible
+            self.table.add_column("graph", no_wrap=True, ratio=1)
+            self.table.add_column("box", no_wrap=True, width=20)
+            self.table.add_row("", self.down_box)
+            self.table.add_row("", self.up_box)
+
+            self.group = Group(self.table, "")
+
+            self.last_io = None
+            self.max_read_bytes_s = 0
+            self.max_read_bytes_s_str = ""
+            self.max_write_bytes_s = 0
+            self.max_write_bytes_s_str = ""
+
+            self.read_stream = BrailleStream(20, 5, 0.0, 1.0e6)
+            self.write_stream = BrailleStream(20, 5, 0.0, 1.0e6, flipud=True)
+        else:
+            self.group = Group("")
+
         self.panel = Panel(
             self.group,
             title="[b]disk[/]",
@@ -57,21 +80,19 @@ class Disk(Widget):
             box=box.SQUARE,
         )
 
-        self.last_io = None
-        self.max_read_bytes_s = 0
-        self.max_read_bytes_s_str = ""
-        self.max_write_bytes_s = 0
-        self.max_write_bytes_s_str = ""
-
-        self.read_stream = BrailleStream(20, 5, 0.0, 1.0e6)
-        self.write_stream = BrailleStream(20, 5, 0.0, 1.0e6, flipud=True)
-
         self.refresh_panel()
 
         self.interval_s = 2.0
         self.set_interval(self.interval_s, self.refresh_panel)
 
     def refresh_panel(self):
+        if self.has_io_counters:
+            self.refresh_io_counters()
+
+        self.refresh_disk_usage()
+        self.refresh()
+
+    def refresh_io_counters(self):
         io = psutil.disk_io_counters()
 
         if self.last_io is None:
@@ -123,6 +144,7 @@ class Disk(Widget):
             "\n".join(self.write_stream.graph), style="blue"
         )
 
+    def refresh_disk_usage(self):
         table = Table(box=None, expand=False, padding=(0, 1), show_header=True)
         table.add_column("", justify="left", no_wrap=True, style="bold")
         table.add_column(Text("free", justify="left"), justify="right", no_wrap=True)
@@ -151,13 +173,12 @@ class Disk(Widget):
                 f"({du.percent:.1f}%)",
                 style=style,
             )
-        self.group.renderables[1] = table
-
-        self.refresh()
+        self.group.renderables[-1] = table
 
     def render(self):
         return self.panel
 
     async def on_resize(self, event):
-        self.read_stream.reset_width(event.width - 25)
-        self.write_stream.reset_width(event.width - 25)
+        if self.has_io_counters:
+            self.read_stream.reset_width(event.width - 25)
+            self.write_stream.reset_width(event.width - 25)
