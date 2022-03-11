@@ -44,9 +44,11 @@ def _autoselect_interface():
         else:
             score_dict[name] = 3
 
-    # Get key with max score
-    # https://stackoverflow.com/a/280156/353337
-    return max(score_dict, key=score_dict.get)
+    # Amongst all keys with max score, get the alphabetically first.
+    # This is to prefer en0 over en5, <https://github.com/nschloe/tiptop/issues/81>.
+    max_score = max(score_dict.values())
+    max_keys = [key for key, score in score_dict.items() if score == max_score]
+    return sorted(max_keys)[0]
 
 
 class Net(Widget):
