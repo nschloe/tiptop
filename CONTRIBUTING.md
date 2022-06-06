@@ -1,7 +1,7 @@
 # tiptop contributing guidelines
 
 The tiptop community appreciates your contributions via issues and
-pull requests.  Note that the [code of conduct](CODE_OF_CONDUCT.md)
+pull requests. Note that the [code of conduct](CODE_OF_CONDUCT.md)
 applies to all interactions with the tiptop project, including
 issues and pull requests.
 
