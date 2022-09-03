@@ -3,10 +3,11 @@ version := `python3 -c "from src.tiptop.__about__ import __version__; print(__ve
 default:
 	@echo "\"just publish\"?"
 
-publish:
+publish: clean
 	@if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then exit 1; fi
 	gh release create "v{{version}}"
-	flit publish
+	python3 -m build --sdist --wheel .
+	twine upload dist/*
 
 clean:
 	@find . | grep -E "(__pycache__|\.pyc|\.pyo$)" | xargs rm -rf
