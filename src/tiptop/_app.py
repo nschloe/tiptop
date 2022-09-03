@@ -3,11 +3,9 @@ from __future__ import annotations
 import argparse
 from sys import version_info
 
-import psutil
 from textual.app import App
 
 from .__about__ import __version__
-from ._battery import Battery
 from ._cpu import CPU
 from ._disk import Disk
 from ._info import InfoLine
@@ -75,51 +73,26 @@ def run(argv=None):
             grid.add_column(fraction=55, name="left")
             grid.add_column(fraction=34, name="right")
 
-            if psutil.sensors_battery() is None:
-                grid.add_row(size=1, name="r0")
-                grid.add_row(fraction=1, name="r1")
-                grid.add_row(fraction=1, name="r2")
-                grid.add_row(fraction=1, name="r3")
-                grid.add_areas(
-                    area0="left-start|right-end,r0",
-                    area1="left,r1",
-                    area2a="right,r1",
-                    area2b="right,r2",
-                    area2c="right,r3",
-                    area3="left,r2-start|r3-end",
-                )
-                grid.place(
-                    area0=InfoLine(),
-                    area1=CPU(),
-                    area2a=Mem(),
-                    area2b=Disk(),
-                    area2c=Net(args.net),
-                    area3=ProcsList(),
-                )
-            else:
-                grid.add_row(size=1, name="r0")
-                grid.add_row(fraction=17, name="r1")
-                grid.add_row(fraction=4, name="r2")
-                grid.add_row(fraction=15, name="r3")
-                grid.add_row(fraction=15, name="r4")
-                grid.add_areas(
-                    area0="left-start|right-end,r0",
-                    area1="left,r1",
-                    area2a="right,r1",
-                    area2b="right,r2",
-                    area2c="right,r3",
-                    area2d="right,r4",
-                    area3="left,r2-start|r4-end",
-                )
-                grid.place(
-                    area0=InfoLine(),
-                    area1=CPU(),
-                    area2a=Mem(),
-                    area2b=Battery(),
-                    area2c=Disk(),
-                    area2d=Net(args.net),
-                    area3=ProcsList(),
-                )
+            grid.add_row(size=1, name="r0")
+            grid.add_row(fraction=1, name="r1")
+            grid.add_row(fraction=1, name="r2")
+            grid.add_row(fraction=1, name="r3")
+            grid.add_areas(
+                area0="left-start|right-end,r0",
+                area1="left,r1",
+                area2a="right,r1",
+                area2b="right,r2",
+                area2c="right,r3",
+                area3="left,r2-start|r3-end",
+            )
+            grid.place(
+                area0=InfoLine(),
+                area1=CPU(),
+                area2a=Mem(),
+                area2b=Disk(),
+                area2c=Net(args.net),
+                area3=ProcsList(),
+            )
 
         async def on_load(self, _):
             await self.bind("q", "quit", "quit")
