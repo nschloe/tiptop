@@ -43,8 +43,8 @@ class InfoLine(Widget):
 
     def render(self):
         uptime_s = time.time() - self.boot_time
-        d = datetime(1, 1, 1) + timedelta(seconds=uptime_s)
-        right = [f"up {d.day - 1}d, {d.hour}:{d.minute:02d}h"]
+        d, h, m = days_hours_minutes(timedelta(seconds=uptime_s))
+        right = [f"up {d}d, {h}:{m:02d}h"]
 
         table = Table(show_header=False, expand=True, box=None, padding=0)
         if self.width < 100:
@@ -63,3 +63,7 @@ class InfoLine(Widget):
     async def on_resize(self, event):
         self.width = event.width
         self.height = event.height
+
+
+def days_hours_minutes(td):
+    return td.days, td.seconds // 3600, (td.seconds // 60) % 60
