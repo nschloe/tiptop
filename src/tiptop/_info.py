@@ -42,9 +42,24 @@ class InfoLine(Widget):
         self.boot_time = psutil.boot_time()
 
     def render(self):
-        uptime_s = time.time() - self.boot_time
-        d, h, m = days_hours_minutes(timedelta(seconds=uptime_s))
-        right = [f"up {d}d, {h}:{m:02d}h"]
+        uptime = timedelta(seconds=time.time() - self.boot_time)
+        h, m = seconds_to_h_m(uptime.seconds)
+
+        right = [f"up {uptime.days}d, {h}:{m:02d}h"]
+
+        bat = psutil.sensors_battery()
+        if bat is not None:
+            # hh, mm = seconds_to_h_m(bat.secsleft)
+            bat_string = f"bat {bat.percent:.1f}%"
+            if bat.power_plugged:
+                bat_string = "[green]" + bat_string + "[/]"
+            elif bat.percent < 10:
+                bat_string = "[red reverse bold]" + bat_string + "[/]"
+            elif bat.percent < 15:
+                bat_string = "[red]" + bat_string + "[/]"
+            elif bat.percent < 20:
+                bat_string = "[yellow]" + bat_string + "[/]"
+            right.append(bat_string)
 
         table = Table(show_header=False, expand=True, box=None, padding=0)
         if self.width < 100:
@@ -56,7 +71,7 @@ class InfoLine(Widget):
             table.add_column(justify="center", no_wrap=True, ratio=1)
             table.add_column(justify="right", no_wrap=True, ratio=1)
             table.add_row(
-                self.left_string, datetime.now().strftime("%c"), ", ".join(right)
+                self.left_string, datetime.now().strftime("%c"), "  ".join(right)
             )
         return table
 
@@ -65,5 +80,5 @@ class InfoLine(Widget):
         self.height = event.height
 
 
-def days_hours_minutes(td):
-    return td.days, td.seconds // 3600, (td.seconds // 60) % 60
+def seconds_to_h_m(seconds):
+    return seconds // 3600, (seconds // 60) % 60
