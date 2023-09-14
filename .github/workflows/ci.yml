@@ -38,5 +38,5 @@ jobs:
           pip install tox
           tox
       - name: Submit to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         if: ${{ matrix.python-version == '3.10' }}
