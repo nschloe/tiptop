@@ -100,13 +100,11 @@ def run(argv=None):
     try:
         TiptopApp.run(log=args.log)
     except TypeError as e:
-        print(args)
         if "run() got an unexpected keyword argument 'log'" in e.args[0]:
             try:
                 from textual import __version__ as textual_version
             except:
                 textual_version = "0"
-            # print in red "You're using an incorrect version of textual." Please check "https://github.com/nschloe/tiptop/issues/109"
             debug_info = (
                 "\033[91m"
                 "You're using an incorrect version of textual.\n"
