@@ -108,16 +108,16 @@ def run(argv=None):
             debug_info = (
                 "\033[91m"
                 "You're using an incorrect version of textual.\n"
-                "Please run `pip install textual==1.9.0` to fix this.\n"
+                'Please run `pip install "textual>=0.1.15, <0.2"` to fix this.\n'
                 "Checkout https://github.com/nschloe/tiptop/issues/109 for more information!"
             )
 
             if textual_version != "0":
-                debug_info += (
-                    "Seems like you are right now on textual version: ", textual_version
-                )
+                debug_info += "\nSeems like you are right now on textual version: " + textual_version
 
             debug_info += "\033[0m"
+
+            print(debug_info)
 
         else:
             raise e
