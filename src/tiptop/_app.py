@@ -97,7 +97,30 @@ def run(argv=None):
         async def on_load(self, _):
             await self.bind("q", "quit", "quit")
 
-    TiptopApp.run(log=args.log)
+    try:
+        TiptopApp.run(log=args.log)
+    except TypeError as e:
+        if "run() got an unexpected keyword argument 'log'" in e.args[0]:
+            try:
+                from textual import __version__ as textual_version
+            except:
+                textual_version = "0"
+            debug_info = (
+                "\033[91m"
+                "You're using an incorrect version of textual.\n"
+                'Please run `pip install "textual>=0.1.15, <0.2"` to fix this.\n'
+                "Checkout https://github.com/nschloe/tiptop/issues/109 for more information!"
+            )
+
+            if textual_version != "0":
+                debug_info += "\nSeems like you are right now on textual version: " + textual_version
+
+            debug_info += "\033[0m"
+
+            print(debug_info)
+
+        else:
+            raise e
 
 
 def _get_version_text():
