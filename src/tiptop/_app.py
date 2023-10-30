@@ -97,7 +97,28 @@ def run(argv=None):
         async def on_load(self, _):
             await self.bind("q", "quit", "quit")
 
-    TiptopApp.run(log=args.log)
+    try:
+        TiptopApp.run(log=args.log)
+    except TypeError as e:
+        if "run() got an unexpected keyword argument 'log'" in e.args[0]:
+            try:
+                from textual import __version__ as textual_version
+            except:
+                textual_version = "unknown"
+
+            debug_info = (
+                "\033[91m"
+                "You have an incompatible version of textual library.\n"
+                "\033[0m"
+                "It should be >=0.1.15,<0.2\n"
+                f"Your textual version is {textual_version}\n"
+                "Look at https://github.com/nschloe/tiptop/issues/109 for more information."
+            )
+
+            print(debug_info)
+
+        else:
+            raise e
 
 
 def _get_version_text():
