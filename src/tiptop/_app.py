@@ -104,20 +104,18 @@ def run(argv=None):
             try:
                 from textual import __version__ as textual_version
             except:
-                textual_version = "0"
+                textual_version = "unknown"
+
             debug_info = (
                 "\033[91m"
-                "You're using an incorrect version of textual.\n"
-                "Please run `pip install textual==1.9.0` to fix this.\n"
-                "Checkout https://github.com/nschloe/tiptop/issues/109 for more information!"
+                "You have an incompatible version of textual library.\n"
+                "\033[0m"
+                "It should be >=0.1.15,<0.2\n"
+                f"Your textual version is {textual_version}\n"
+                "Look at https://github.com/nschloe/tiptop/issues/109 for more information."
             )
 
-            if textual_version != "0":
-                debug_info += (
-                    "Seems like you are right now on textual version: ", textual_version
-                )
-
-            debug_info += "\033[0m"
+            print(debug_info)
 
         else:
             raise e
