@@ -31,7 +31,7 @@ dependencies = [
    "distro",
    "psutil",
    "rich >= 11.0.0",
-   "textual >=0.1.15, <0.2",
+   "textual >=0.83, <0.84",
 ]
 
 [tool.setuptools.dynamic]
